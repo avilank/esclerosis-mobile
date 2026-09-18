@@ -1,0 +1,63 @@
+name: esclerosis_mobile
+description: "Esclerosis Mobile - app Flutter (sin servicios de Google)."
+publish_to: 'none'
+
+# version+build. Ver scripts/build-apk-prod.ps1/.sh para el criterio de bump.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management + dependency injection (compile-safe).
+  flutter_riverpod: ^3.0.0
+
+  # HTTP client con interceptores (Bearer + manejo de sesion expirada).
+  dio: ^5.0.0
+
+  # Ruteo declarativo con redirects segun estado de auth.
+  go_router: ^14.0.0
+
+  # Almacenamiento cifrado del token (Keychain / Keystore). Sin Google.
+  flutter_secure_storage: ^9.0.0
+
+  # Persistencia de preferencias simples (idioma, flags locales).
+  shared_preferences: ^2.3.0
+
+  # Cache en disco/memoria para imagenes remotas.
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+
+  # Abrir adjuntos y links externos en el visor del SO.
+  url_launcher: ^6.3.0
+  path_provider: ^2.1.5
+  share_plus: ^12.0.2
+
+  # Detecta Wi-Fi / datos / sin red para avisar al usuario.
+  connectivity_plus: ^6.1.0
+
+  # Info de version/build de la app instalada y del dispositivo (sin permisos
+  # sensibles, sin Google Play Services).
+  package_info_plus: ^9.0.1
+  device_info_plus: ^12.4.0
+
+  # Actualizaciones OTA de codigo Dart. No es un servicio de Google.
+  shorebird_code_push: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Se agregan a medida que se sumen assets propios (logo, iconos).
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
