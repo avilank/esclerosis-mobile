@@ -1,5 +1,4 @@
 {
   "API_BASE_URL": "http://10.0.2.2:3000/api",
-  "ENV_NAME": "dev",
-  "N8N_WEBHOOK_URL": ""
+  "ENV_NAME": "dev"
 }

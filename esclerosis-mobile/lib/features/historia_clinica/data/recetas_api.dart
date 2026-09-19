@@ -10,6 +10,19 @@ class RecetasApi {
 
   final Dio _dio;
 
+  Future<List<Receta>> getAll() async {
+    try {
+      final response = await _dio.get<List<dynamic>>('/recetas');
+      final data = response.data ?? const [];
+      return data
+          .whereType<Map>()
+          .map((e) => Receta.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<Receta> create({
     required int idDiagnostico,
     required int idTratamiento,

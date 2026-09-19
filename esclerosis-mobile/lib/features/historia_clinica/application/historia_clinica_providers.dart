@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/n8n_service.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/diagnostico_api.dart';
 import '../data/diagnostico_indicadores_api.dart';
 import '../data/historia_clinica_api.dart';
 import '../data/historia_clinica_repository.dart';
+import '../data/ia_receta_api.dart';
+import '../data/medicos_api.dart';
 import '../data/pacientes_api.dart';
+import '../domain/medico.dart';
 import '../data/recetas_api.dart';
 import '../domain/diagnostico.dart';
 import '../domain/historia_clinica.dart';
@@ -28,11 +30,17 @@ final pacientesApiProvider = Provider<PacientesApi>((ref) {
   return PacientesApi(ref.read(dioProvider));
 });
 
+final medicosApiProvider = Provider<MedicosApi>((ref) {
+  return MedicosApi(ref.read(dioProvider));
+});
+
 final recetasApiProvider = Provider<RecetasApi>((ref) {
   return RecetasApi(ref.read(dioProvider));
 });
 
-final n8nServiceProvider = Provider<N8nService>((ref) => N8nService());
+final iaRecetaApiProvider = Provider<IaRecetaApi>((ref) {
+  return IaRecetaApi(ref.read(dioProvider));
+});
 
 final pacientesListProvider = FutureProvider.autoDispose<List<Paciente>>((ref) {
   return ref.read(pacientesApiProvider).getAll();
@@ -41,6 +49,22 @@ final pacientesListProvider = FutureProvider.autoDispose<List<Paciente>>((ref) {
 /// Todas las historias clinicas del sistema (uso administrativo).
 final historiasClinicasListProvider = FutureProvider.autoDispose<List<HistoriaClinica>>((ref) {
   return ref.read(historiaClinicaApiProvider).getAll();
+});
+
+/// Historias activas para registrar diagnostico (como en esclerosis-movil).
+final historiasClinicasActivasProvider = FutureProvider.autoDispose<List<HistoriaClinica>>((ref) async {
+  final all = await ref.read(historiaClinicaApiProvider).getAll();
+  return all.where((h) => h.isActive).toList();
+});
+
+final medicosListProvider = FutureProvider.autoDispose<List<Medico>>((ref) {
+  return ref.read(medicosApiProvider).getAll();
+});
+
+/// Medicos activos para el selector del formulario de diagnostico.
+final medicosActivosProvider = FutureProvider.autoDispose<List<Medico>>((ref) async {
+  final all = await ref.read(medicosApiProvider).getAll();
+  return all.where((m) => m.isActive).toList();
 });
 
 final historiaClinicaRepositoryProvider = Provider<HistoriaClinicaRepository>((ref) {

@@ -1,76 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/empty_view.dart';
-import '../../../core/widgets/error_view.dart';
-import '../../../core/widgets/loading_view.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/historia_clinica_providers.dart';
+import '../domain/diagnostico.dart';
 import 'diagnostico_detail_screen.dart';
 import 'diagnostico_form_screen.dart';
 import 'widgets/estado_salud_tag.dart';
 
-/// Lista de diagnosticos realizados por el medico logueado, con acceso a
-/// crear uno nuevo. Equivalente a
-/// `esclerosis-movil/src/app/(tabs)/diagnosticos/index.tsx`.
+/// Lista de diagnosticos del medico logueado. Equivalente a
+/// `esclerosis-movil/src/features/diagnosticos/screens/ListDiagnostico.tsx`.
 class DiagnosticosListScreen extends ConsumerWidget {
   const DiagnosticosListScreen({super.key});
+
+  static String _formatFecha(String raw) {
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return DateFormat('dd/MM/yyyy').format(parsed);
+  }
+
+  Future<void> _openCreate(BuildContext context, WidgetRef ref) async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DiagnosticoFormScreen()),
+    );
+    if (created == true) {
+      ref.invalidate(misDiagnosticosProvider);
+    }
+  }
+
+  Future<void> _eliminar(BuildContext context, WidgetRef ref, Diagnostico d) async {
+    final nombre = d.paciente?.nombrePaciente ?? 'este paciente';
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Confirmar eliminación',
+      message: '¿Eliminar el diagnóstico de $nombre?',
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(historiaClinicaRepositoryProvider).eliminarDiagnostico(d.idDiagnostico);
+      ref.invalidate(misDiagnosticosProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final diagnosticosAsync = ref.watch(misDiagnosticosProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Diagnósticos')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final created = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(builder: (_) => const DiagnosticoFormScreen()),
-          );
-          if (created == true) {
-            ref.invalidate(misDiagnosticosProvider);
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(misDiagnosticosProvider.future),
-        child: diagnosticosAsync.when(
-          loading: () => const LoadingView(),
-          error: (error, _) => ErrorView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(misDiagnosticosProvider),
+    return CrudListScaffold<Diagnostico>(
+      title: 'Diagnósticos',
+      searchHint: 'Buscar paciente por nombre o DNI...',
+      async: diagnosticosAsync,
+      onAdd: () => _openCreate(context, ref),
+      onRefresh: () => ref.refresh(misDiagnosticosProvider.future),
+      filter: (d, query) {
+        final nombre = (d.paciente?.nombrePaciente ?? '').toLowerCase();
+        final dni = (d.paciente?.dniPaciente ?? '').toLowerCase();
+        return nombre.contains(query) || dni.contains(query) || d.estadoSalud.toLowerCase().contains(query);
+      },
+      emptyMessage: 'No hay diagnósticos registrados.',
+      emptyIcon: Icons.medical_information_outlined,
+      countLabel: (count) =>
+          '$count diagnóstico${count == 1 ? '' : 's'} encontrado${count == 1 ? '' : 's'}',
+      itemBuilder: (context, diagnostico) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => DiagnosticoDetailScreen(idDiagnostico: diagnostico.idDiagnostico),
           ),
-          data: (diagnosticos) {
-            if (diagnosticos.isEmpty) {
-              return const EmptyView(
-                message: 'Todavía no registraste diagnósticos.',
-                icon: Icons.medical_information_outlined,
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.s5),
-              itemCount: diagnosticos.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.s2),
-              itemBuilder: (context, index) {
-                final diagnostico = diagnosticos[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(diagnostico.fechaDiagnostico),
-                    subtitle: Text(diagnostico.gradoEnfermedad),
-                    trailing: EstadoSaludTag(diagnostico: diagnostico),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            DiagnosticoDetailScreen(idDiagnostico: diagnostico.idDiagnostico),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+        ),
+        child: CrudListRow(
+          avatarText: diagnostico.paciente?.nombrePaciente ?? 'NA',
+          title: diagnostico.paciente?.nombrePaciente ?? 'Sin paciente',
+          subtitle:
+              'DNI: ${diagnostico.paciente?.dniPaciente ?? '-'} · ${_formatFecha(diagnostico.fechaDiagnostico)}',
+          subtitleIcon: Icons.calendar_today_outlined,
+          actions: [
+            EstadoSaludTag(diagnostico: diagnostico),
+            const SizedBox(width: 4),
+            CrudVerticalActions(
+              onEdit: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      DiagnosticoDetailScreen(idDiagnostico: diagnostico.idDiagnostico),
+                ),
+              ),
+              onDelete: () => _eliminar(context, ref, diagnostico),
+            ),
+          ],
         ),
       ),
     );

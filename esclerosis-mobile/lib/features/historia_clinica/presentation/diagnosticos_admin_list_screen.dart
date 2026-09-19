@@ -5,6 +5,7 @@ import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/historia_clinica_providers.dart';
 import '../domain/diagnostico.dart';
 import 'diagnostico_detail_screen.dart';
+import 'diagnostico_form_screen.dart';
 import 'widgets/estado_salud_tag.dart';
 
 class _DiagnosticoEntry {
@@ -34,10 +35,21 @@ class DiagnosticosAdminListScreen extends ConsumerWidget {
       return entries;
     });
 
+    Future<void> crear() async {
+      final created = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const DiagnosticoFormScreen()),
+      );
+      if (created == true) {
+        ref.invalidate(historiasClinicasListProvider);
+        ref.invalidate(misDiagnosticosProvider);
+      }
+    }
+
     return CrudListScaffold<_DiagnosticoEntry>(
       title: 'Diagnósticos',
       searchHint: 'Buscar por paciente o estado...',
       async: entriesAsync,
+      onAdd: crear,
       onBack: () => Navigator.of(context).pop(),
       onRefresh: () => ref.refresh(historiasClinicasListProvider.future),
       filter: (entry, query) =>

@@ -8,6 +8,7 @@ class HistoriaClinica {
     required this.idPaciente,
     required this.estado,
     required this.fechaIngreso,
+    this.isActive = true,
     this.paciente,
     this.diagnosticos = const [],
   });
@@ -16,6 +17,7 @@ class HistoriaClinica {
   final int idPaciente;
   final String estado;
   final String fechaIngreso;
+  final bool isActive;
   final Paciente? paciente;
   final List<Diagnostico> diagnosticos;
 
@@ -30,6 +32,7 @@ class HistoriaClinica {
       idPaciente: (json['idPaciente'] as num).toInt(),
       estado: json['estado']?.toString() ?? '',
       fechaIngreso: json['fechaIngreso']?.toString() ?? '',
+      isActive: json['isActive'] as bool? ?? true,
       paciente: pacienteJson != null ? Paciente.fromJson(pacienteJson) : null,
       diagnosticos: diagnosticosJson == null
           ? const []

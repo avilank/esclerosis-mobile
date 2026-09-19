@@ -1,5 +1,4 @@
 {
   "API_BASE_URL": "https://REEMPLAZAR-con-dominio-de-esclerosis-back/api",
-  "ENV_NAME": "prod",
-  "N8N_WEBHOOK_URL": ""
+  "ENV_NAME": "prod"
 }

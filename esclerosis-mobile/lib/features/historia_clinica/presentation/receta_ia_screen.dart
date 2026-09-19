@@ -1,134 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/env/app_env.dart';
-import '../../../core/network/n8n_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../tratamientos/application/tratamientos_providers.dart';
 import '../application/historia_clinica_providers.dart';
+import '../data/ia_receta_api.dart';
 
-/// Asistente de Prescripcion (Copilot / Deepseek). Equivalente a
-/// `esclerosis-movil/src/features/diagnosticos/components/RecetaModal.tsx`
-/// (ver manual de usuario ESCLEROSIS - BI, figuras 38 y 39).
-///
-/// Si [AppEnv.n8nWebhookUrl] esta vacio, muestra una vista previa del
-/// diseno (sin llamar al webhook) y no persiste receta. Cuando se configure
-/// la URL, [N8nService.generateReceta] se activa con el mismo contrato que
-/// `N8nService.ts`.
+/// Asistente de Prescripcion (una recomendacion via OpenRouter en el backend).
+/// Equivalente a `esclerosis-movil/.../RecetaModal.tsx` (figuras 38 y 39),
+/// sin selector de modelos dual.
 class RecetaIaScreen extends ConsumerStatefulWidget {
-  const RecetaIaScreen({
-    super.key,
-    required this.idDiagnostico,
-    required this.diagnosticoData,
-  });
+  const RecetaIaScreen({super.key, required this.idDiagnostico});
 
   final int idDiagnostico;
-  final Map<String, dynamic> diagnosticoData;
 
   @override
   ConsumerState<RecetaIaScreen> createState() => _RecetaIaScreenState();
 }
 
 class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
-  static const _modelos = ['COPILOT', 'DEEPSEEK'];
-
   bool _generating = false;
   bool _saving = false;
   bool _preview = false;
-  String _selectedModel = 'COPILOT';
   String _sustentacion = '';
-  N8nRecetasResponse? _results;
+  IaResultadoReceta? _result;
   String? _error;
 
-  IaResultadoReceta? get _current {
-    if (_results == null) return null;
-    return _selectedModel == 'COPILOT' ? _results!.copilot : _results!.deepseek;
-  }
+  Future<void> _generate({bool regenerar = false}) async {
+    if (regenerar && _result != null && !_preview) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Regenerar sugerencia'),
+          content: const Text(
+            'Volver a llamar a la IA consume crédito de OpenRouter. ¿Continuar?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Regenerar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
 
-  Future<void> _generate() async {
     setState(() {
       _generating = true;
       _error = null;
     });
     try {
-      final tratamientos = await ref.read(tratamientosListProvider.future);
-      final catalogo = [
-        for (final t in tratamientos) (idTratamiento: t.idTratamiento, nombre: t.nombre),
-      ];
-      if (!AppEnv.hasN8nWebhook) {
-        setState(() {
-          _preview = true;
-          _results = _previewResponse(catalogo);
-          if (_results!.deepseek != null) _selectedModel = 'DEEPSEEK';
-          if (_results!.copilot != null) _selectedModel = 'COPILOT';
-        });
-        return;
-      }
-      final response = await ref.read(n8nServiceProvider).generateReceta(
-            diagnosticoData: widget.diagnosticoData,
-            tratamientos: catalogo,
+      final result = await ref.read(iaRecetaApiProvider).sugerir(
+            idDiagnostico: widget.idDiagnostico,
+            regenerar: regenerar,
           );
+      if (!mounted) return;
       setState(() {
         _preview = false;
-        _results = response;
-        if (response.deepseek != null) {
-          _selectedModel = 'DEEPSEEK';
-        } else if (response.copilot != null) {
-          _selectedModel = 'COPILOT';
-        }
+        _result = result;
       });
-    } on N8nNotConfiguredException {
+    } on IaNotConfiguredException {
+      final tratamientos = await ref.read(tratamientosListProvider.future);
+      if (!mounted) return;
       setState(() {
         _preview = true;
-        _results = _previewResponse(const []);
+        _result = _previewResult(
+          tratamientos.isEmpty ? null : tratamientos.first.nombre,
+          tratamientos.isEmpty ? null : tratamientos.first.idTratamiento,
+        );
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _generating = false);
     }
   }
 
-  N8nRecetasResponse _previewResponse(
-    List<({int idTratamiento, String nombre})> tratamientos,
-  ) {
-    final primero = tratamientos.isEmpty ? null : tratamientos.first;
-    IaResultadoReceta demo(String modelo, String nombre) {
-      return IaResultadoReceta(
-        modelo: modelo,
-        tratamientoId: primero?.idTratamiento,
-        tratamientoNombre: primero?.nombre ?? nombre,
-        contenido:
-            'Iniciar ${nombre.toLowerCase()} via oral según pauta estándar, con titulación progresiva y controles hematológicos periódicos.',
-        justificacion:
-            'Paciente con EM recurrente con EDSS bajo pero evidencia de actividad inflamatoria en RM y afectación cognitiva leve. Se recomienda una estrategia de escalado con un DMT oral de eficacia intermedia-alta y perfil de seguridad conocido.',
-        avisoSeguridad:
-            'Esta recomendación es orientativa y debe ser validada por un neurólogo especialista.',
-      );
-    }
-
-    return N8nRecetasResponse(
-      copilot: demo('COPILOT', 'Dimetilfumarato'),
-      deepseek: demo('DEEPSEEK', 'Acetato de glatiramer'),
+  IaResultadoReceta _previewResult(String? nombre, int? id) {
+    final tratamiento = nombre ?? 'Dimetilfumarato';
+    return IaResultadoReceta(
+      modelo: 'OpenRouter',
+      tratamientoId: id,
+      tratamientoNombre: tratamiento,
+      contenido:
+          'Iniciar ${tratamiento.toLowerCase()} via oral según pauta estándar, con titulación progresiva y controles hematológicos periódicos.',
+      justificacion:
+          'Paciente con EM recurrente. Se recomienda una estrategia de escalado con un DMT oral de eficacia intermedia-alta y perfil de seguridad conocido.',
+      avisoSeguridad:
+          'Esta recomendación es orientativa y debe ser validada por un neurólogo especialista.',
     );
   }
 
   Future<void> _save() async {
-    final actual = _current;
+    final actual = _result;
     if (actual == null) return;
-    if (_preview || !AppEnv.hasN8nWebhook) {
+    if (_preview) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'IA no configurada: no se guardó receta. Configure N8N_WEBHOOK_URL en env/*.json.',
-          ),
-        ),
-      );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(false);
       return;
     }
     final tratamientoId = actual.tratamientoId;
@@ -143,10 +113,12 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
       await ref.read(recetasApiProvider).create(
             idDiagnostico: widget.idDiagnostico,
             idTratamiento: tratamientoId,
-            modeloIa: _selectedModel,
+            modeloIa: 'OpenRouter',
             fechaReceta: DateTime.now(),
             contenido: actual.contenido,
-            sustentacion: _sustentacion.trim().isEmpty ? actual.justificacion : _sustentacion.trim(),
+            sustentacion: _sustentacion.trim().isEmpty
+                ? actual.justificacion
+                : _sustentacion.trim(),
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -201,7 +173,7 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
                               ),
                             ),
                             Text(
-                              _results == null ? 'Asistente de Prescripción' : 'Editar Receta',
+                              _result == null ? 'Asistente de Prescripción' : 'Editar Receta',
                               style: AppTypography.heading2,
                             ),
                           ],
@@ -221,12 +193,12 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(AppSpacing.s5),
-                    child: _results == null ? _generatingView() : _resultsView(),
+                    child: _result == null ? _generatingView() : _resultsView(),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.s5, 0, AppSpacing.s5, AppSpacing.s5),
-                  child: _results == null ? _generatingActions() : _resultsActions(),
+                  child: _result == null ? _generatingActions() : _resultsActions(),
                 ),
               ],
             ),
@@ -255,29 +227,13 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
           style: AppTypography.body,
           textAlign: TextAlign.center,
         ),
-        if (!AppEnv.hasN8nWebhook) ...[
-          const SizedBox(height: AppSpacing.s4),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
-              borderRadius: AppRadii.mdAll,
-              border: Border.all(color: const Color(0xFFFDE68A)),
-            ),
-            child: Text(
-              'IA no configurada. Se mostrará una vista previa del diseño. Para activarla, configure N8N_WEBHOOK_URL en env/dev.json o env/prod.json.',
-              style: AppTypography.caption.copyWith(color: const Color(0xFF92400E)),
-            ),
-          ),
-        ],
         if (_error != null) ...[
           const SizedBox(height: AppSpacing.s3),
           Text(_error!, style: AppTypography.caption.copyWith(color: AppColors.danger)),
         ],
         const SizedBox(height: AppSpacing.s6),
         FilledButton.icon(
-          onPressed: _generating ? null : _generate,
+          onPressed: _generating ? null : () => _generate(regenerar: false),
           icon: _generating
               ? const SizedBox(
                   width: 16,
@@ -299,7 +255,8 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
   }
 
   Widget _resultsView() {
-    final actual = _current;
+    final actual = _result;
+    if (actual == null) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -313,166 +270,146 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
               border: Border.all(color: const Color(0xFFFDE68A)),
             ),
             child: Text(
-              'Vista previa (IA no configurada). Los tratamientos mostrados no se guardarán.',
+              'Modo vista previa: el backend no pudo usar la IA (reinicie esclerosis-back tras poner OPENROUTER_API_KEY en .env). '
+              'El diagnóstico ya está guardado; esta receta no se almacenará.',
               style: AppTypography.caption.copyWith(color: const Color(0xFF92400E)),
             ),
           ),
         Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(color: AppColors.subtle, borderRadius: AppRadii.mdAll),
-          child: Row(
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: AppRadii.lgAll,
+            border: Border.all(color: const Color(0xFFDBEAFE)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final modelo in _modelos)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      final exists = modelo == 'COPILOT' ? _results?.copilot != null : _results?.deepseek != null;
-                      if (exists) setState(() => _selectedModel = modelo);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _selectedModel == modelo ? AppColors.card : Colors.transparent,
-                        borderRadius: AppRadii.smAll,
-                      ),
-                      child: Text(
-                        modelo,
-                        style: AppTypography.label.copyWith(
-                          color: _selectedModel == modelo ? const Color(0xFF2563EB) : AppColors.muted,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+              Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFBFDBFE),
+                    borderRadius: AppRadii.smAll,
+                  ),
+                  child: const Text(
+                    'EDITANDO',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF1E40AF)),
                   ),
                 ),
+              ),
+              Text(
+                'TRATAMIENTO SUGERIDO',
+                style: AppTypography.caption.copyWith(
+                  color: const Color(0xFF3B82F6),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(actual.tratamientoNombre, style: AppTypography.heading2.copyWith(color: const Color(0xFF1E3A8A))),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.s4),
-        if (actual == null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s7),
-            child: Text('Sin resultados disponibles.', style: AppTypography.caption, textAlign: TextAlign.center),
-          )
-        else ...[
+        if ((actual.avisoSeguridad ?? '').isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s3),
           Container(
-            padding: const EdgeInsets.all(AppSpacing.s4),
+            padding: const EdgeInsets.all(AppSpacing.s3),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: AppRadii.lgAll,
-              border: Border.all(color: const Color(0xFFDBEAFE)),
+              color: const Color(0xFFFFFBEB),
+              borderRadius: AppRadii.mdAll,
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Text(
+              actual.avisoSeguridad!,
+              style: AppTypography.caption.copyWith(color: const Color(0xFF92400E)),
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.s4),
+        Text('Detalle de la Receta (IA)', style: AppTypography.label),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.s3),
+          decoration: BoxDecoration(
+            color: AppColors.subtle,
+            borderRadius: AppRadii.mdAll,
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Text(actual.contenido, style: AppTypography.body),
+        ),
+        if ((actual.justificacion ?? '').isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s3),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s3),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0FDFA),
+              border: Border(left: BorderSide(color: AppColors.primary, width: 4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFBFDBFE),
-                      borderRadius: AppRadii.smAll,
-                    ),
-                    child: const Text(
-                      'EDITANDO',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF1E40AF)),
-                    ),
-                  ),
-                ),
-                Text(
-                  'TRATAMIENTO SUGERIDO',
-                  style: AppTypography.caption.copyWith(
-                    color: const Color(0xFF3B82F6),
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.6,
-                  ),
-                ),
+                Text('Por qué la IA sugiere esto:', style: AppTypography.label.copyWith(color: AppColors.primaryHover)),
                 const SizedBox(height: 4),
-                Text(actual.tratamientoNombre, style: AppTypography.heading2.copyWith(color: const Color(0xFF1E3A8A))),
+                Text(actual.justificacion!, style: AppTypography.caption.copyWith(fontStyle: FontStyle.italic)),
               ],
             ),
           ),
-          if ((actual.avisoSeguridad ?? '').isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s3),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.s3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                borderRadius: AppRadii.mdAll,
-                border: Border.all(color: const Color(0xFFFDE68A)),
-              ),
-              child: Text(
-                actual.avisoSeguridad!,
-                style: AppTypography.caption.copyWith(color: const Color(0xFF92400E)),
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.s4),
-          Text('Detalle de la Receta (IA)', style: AppTypography.label),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.s3),
-            decoration: BoxDecoration(
-              color: AppColors.subtle,
-              borderRadius: AppRadii.mdAll,
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Text(actual.contenido, style: AppTypography.body),
-          ),
-          if ((actual.justificacion ?? '').isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s3),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.s3),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0FDFA),
-                border: Border(left: BorderSide(color: AppColors.primary, width: 4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Por qué la IA sugiere esto:', style: AppTypography.label.copyWith(color: AppColors.primaryHover)),
-                  const SizedBox(height: 4),
-                  Text(actual.justificacion!, style: AppTypography.caption.copyWith(fontStyle: FontStyle.italic)),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.s4),
-          Row(
-            children: [
-              Expanded(child: Text('Su Justificación Médica *', style: AppTypography.label)),
-              Text('Puede modificar este texto', style: AppTypography.caption),
-            ],
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            minLines: 4,
-            maxLines: 6,
-            onChanged: (value) => _sustentacion = value,
-            decoration: const InputDecoration(
-              hintText: 'Escriba el sustento clínico para validar esta receta...',
-            ),
-          ),
         ],
+        const SizedBox(height: AppSpacing.s4),
+        Row(
+          children: [
+            Expanded(child: Text('Su Justificación Médica *', style: AppTypography.label)),
+            Text('Puede modificar este texto', style: AppTypography.caption),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          minLines: 4,
+          maxLines: 6,
+          onChanged: (value) => _sustentacion = value,
+          decoration: const InputDecoration(
+            hintText: 'Escriba el sustento clínico para validar esta receta...',
+          ),
+        ),
       ],
     );
   }
 
   Widget _resultsActions() {
+    if (_preview) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _generating ? null : () => _generate(regenerar: false),
+              child: Text(_generating ? 'Reintentando...' : 'Reintentar IA'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s3),
+          Expanded(
+            child: FilledButton(
+              onPressed: _save,
+              child: const Text('Continuar sin receta'),
+            ),
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: _generating ? null : _generate,
+            onPressed: _generating ? null : () => _generate(regenerar: true),
             child: Text(_generating ? 'Regenerando...' : 'Regenerar IA'),
           ),
         ),
         const SizedBox(width: AppSpacing.s3),
         Expanded(
           child: FilledButton.icon(
-            onPressed: _saving || _current == null ? null : _save,
+            onPressed: _saving || _result == null ? null : _save,
             icon: _saving
                 ? const SizedBox(
                     width: 16,
@@ -480,7 +417,7 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.check, size: 18),
-            label: const Text('Guardar Cambios'),
+            label: const Text('Guardar receta'),
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
           ),
         ),

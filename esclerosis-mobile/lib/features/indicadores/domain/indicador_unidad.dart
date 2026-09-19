@@ -14,4 +14,16 @@ enum IndicadorUnidad {
       orElse: () => IndicadorUnidad.numero,
     );
   }
+
+  /// `unidad` en BD suele ser tipo de dato (numero/texto/booleano), no "kg" o "%".
+  static bool esTipoDeDato(String? unidad) {
+    if (unidad == null || unidad.trim().isEmpty) return true;
+    return IndicadorUnidad.values.any((e) => e.value == unidad.trim());
+  }
+
+  static String valorParaMostrar(String valor, String? unidad) {
+    final u = unidad?.trim();
+    if (u == null || u.isEmpty || esTipoDeDato(u)) return valor;
+    return '$valor $u';
+  }
 }
