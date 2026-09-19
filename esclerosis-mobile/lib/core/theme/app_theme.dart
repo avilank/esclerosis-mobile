@@ -89,13 +89,20 @@ abstract final class AppTheme {
         ),
         hintStyle: AppTypography.body.copyWith(color: AppColors.muted),
         labelStyle: AppTypography.body,
+        // El manual muestra el label siempre arriba del campo (no flotando
+        // adentro al enfocar), por eso se fija `always`.
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        floatingLabelStyle: AppTypography.label.copyWith(color: AppColors.body),
+        // Campos "pill" con relleno gris y sin borde visible en reposo,
+        // igual al mockup de login/formularios de `esclerosis-movil`
+        // (ver manual de usuario ESCLEROSIS - BI.docx, figuras 6, 12, 13).
         border: const OutlineInputBorder(
           borderRadius: AppRadii.pillAll,
-          borderSide: BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: const OutlineInputBorder(
           borderRadius: AppRadii.pillAll,
-          borderSide: BorderSide(color: AppColors.line),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AppRadii.pillAll,
@@ -105,11 +112,36 @@ abstract final class AppTheme {
           borderRadius: AppRadii.pillAll,
           borderSide: BorderSide(color: AppColors.danger),
         ),
+        focusedErrorBorder: const OutlineInputBorder(
+          borderRadius: AppRadii.pillAll,
+          borderSide: BorderSide(color: AppColors.danger, width: 1.5),
+        ),
       ),
 
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: AppRadii.smAll),
+      ),
+
+      // Sin esto, `BottomNavigationBar` con mas de 3 items usa el tipo
+      // `shifting` por defecto y colores sin marca (se ve "en blanco" al
+      // cambiar de tab). `type` tambien se fuerza explicitamente en cada
+      // `BottomNavigationBar` de la app, pero se deja aca el resto del estilo
+      // para que sea consistente si se usa en otro lado.
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: AppColors.card,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.muted,
+        showUnselectedLabels: true,
+        elevation: 8,
+      ),
+
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.muted,
+        indicatorColor: AppColors.primary,
+        dividerColor: AppColors.line,
       ),
     );
   }

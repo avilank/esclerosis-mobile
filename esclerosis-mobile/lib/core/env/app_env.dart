@@ -24,4 +24,13 @@ class AppEnv {
   );
 
   static bool get isDev => envName == 'dev';
+
+  /// URL del webhook de n8n para el Asistente de Prescripcion con IA
+  /// (Copilot/Deepseek), igual a `EXPO_PUBLIC_N8N_WEBHOOK_URL` en
+  /// `esclerosis-movil`. Vacio por defecto: la funcion queda visible en la UI
+  /// pero deshabilitada hasta que se configure aca (ver
+  /// `lib/core/network/n8n_service.dart`).
+  static const String n8nWebhookUrl = String.fromEnvironment('N8N_WEBHOOK_URL', defaultValue: '');
+
+  static bool get hasN8nWebhook => n8nWebhookUrl.isNotEmpty;
 }

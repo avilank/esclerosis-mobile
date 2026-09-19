@@ -7,16 +7,9 @@
 #   ./scripts/build-apk-prod.sh --skip-bump
 #   ./scripts/build-apk-prod.sh --skip-bump env/prod.json
 #
-# En Git Bash de Windows no uses el wrapper Unix de Shorebird: Dart recibe
-# rutas POSIX y falla si MSYS_NO_PATHCONV=1. Este script lo lanza via
-# shorebird.ps1. Alternativa: .\scripts\build-apk-prod.ps1 desde PowerShell.
-#
-# Compila con `shorebird release`, NO con `flutter build apk` a secas: ese
-# binario no lleva enlazado el updater de Shorebird y el release queda huerfano
-# de parches para siempre. Por eso el bump de version previo es obligatorio.
-#
-# Requisito previo (una sola vez): correr `shorebird init` en la raiz de este
-# proyecto para generar `shorebird.yaml` con un app_id propio.
+# Compila con `flutter build apk --release` y firma con el keystore propio
+# configurado en android/key.properties (ver scripts/README.md). Sin
+# Shorebird, sin OTA, sin nada de Google.
 #
 # Antes de compilar incrementa la version en pubspec.yaml:
 #   - patch +1 con carry en 9: 1.0.9 -> 1.1.0, 1.9.9 -> 2.0.0
@@ -26,9 +19,6 @@
 #   build/app/outputs/flutter-apk/app-release.apk
 # Este script COPIA esa APK a releases/ con un nombre único:
 #   esclerosis-1.0.0+1-20260710-155432-a1b2c3d.apk
-#
-# No genera .aab ni requiere Google Play App Signing: el firmado usa el
-# keystore propio configurado en android/key.properties.
 
 set -euo pipefail
 
@@ -38,7 +28,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-bump) SKIP_BUMP=1; shift ;;
     -h|--help)
-      sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) ENV_FILE="$1"; shift ;;
   esac
@@ -47,14 +37,6 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
-# shellcheck source=_shorebird.sh
-source "$SCRIPT_DIR/_shorebird.sh"
-
-if [[ ! -f "$ROOT/shorebird.yaml" ]]; then
-  echo "Error: falta shorebird.yaml en la raiz del proyecto." >&2
-  echo "Corre 'shorebird init' primero (ver scripts/README.md)." >&2
-  exit 1
-fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Error: no existe el archivo de entorno: $ENV_FILE" >&2
@@ -114,9 +96,11 @@ else
   update_pubspec_version "$VERSION_NAME" "$VERSION_CODE"
 fi
 
-SHOREBIRD_APP_ID="$(grep -E '^app_id:' shorebird.yaml | sed -E 's/^app_id:[[:space:]]*//')"
-echo ">> shorebird release android --artifact apk (app_id=$SHOREBIRD_APP_ID)"
-run_shorebird release android --artifact apk --dart-define-from-file="$ENV_FILE"
+echo ">> flutter build apk --release --build-name=$VERSION_NAME --build-number=$VERSION_CODE"
+flutter build apk --release \
+  --build-name="$VERSION_NAME" \
+  --build-number="$VERSION_CODE" \
+  --dart-define-from-file="$ENV_FILE"
 
 SRC="$ROOT/build/app/outputs/flutter-apk/app-release.apk"
 if [[ ! -f "$SRC" ]]; then
@@ -149,8 +133,4 @@ echo "OK  Copia archivada:"
 echo "    $DEST"
 echo "    (${SIZE_MB} MB)"
 echo ""
-echo "OK  Release registrada en Shorebird para $VERSION_NAME+$VERSION_CODE."
-echo ""
-echo "Distribui el APK de releases/ directamente (sin Google Play)."
-echo "Para parchear despues solo el codigo Dart de esa version:"
-echo "    ./scripts/patch-release.sh --release-version $VERSION_NAME+$VERSION_CODE"
+echo "Distribui el APK de releases/ directamente (sin Google Play, sin OTA)."
