@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../historia_clinica/domain/tratamiento.dart';
 import '../application/tratamientos_providers.dart';
 import 'tratamiento_form_sheet.dart';
@@ -18,6 +19,8 @@ class TratamientosListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tratamientosAsync = ref.watch(tratamientosListProvider);
     final api = ref.read(tratamientosApiProvider);
+    // Solo el admin administra el catalogo; el medico lo consulta.
+    final esAdmin = ref.watch(esAdminProvider);
 
     Future<void> crear() async {
       final data = await showTratamientoFormSheet(context);
@@ -36,7 +39,7 @@ class TratamientosListScreen extends ConsumerWidget {
       title: 'Tratamientos',
       searchHint: 'Buscar tratamiento por nombre...',
       async: tratamientosAsync,
-      onAdd: crear,
+      onAdd: esAdmin ? crear : null,
       onRefresh: () => ref.refresh(tratamientosListProvider.future),
       filter: (t, query) => t.nombre.toLowerCase().contains(query),
       emptyMessage: 'No hay tratamientos registrados.',
@@ -48,7 +51,11 @@ class TratamientosListScreen extends ConsumerWidget {
         title: tratamiento.nombre,
         subtitle: 'ID: ${tratamiento.idTratamiento}',
         subtitleIcon: Icons.medication_outlined,
-        actions: [
+        // Los tratamientos del catalogo base (`bloqueado`) no se editan ni se
+        // borran: el asistente de prescripcion depende de ellos.
+        actions: !esAdmin || tratamiento.bloqueado
+            ? const []
+            : [
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 20),
             onPressed: () async {

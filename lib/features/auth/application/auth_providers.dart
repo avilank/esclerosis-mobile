@@ -100,3 +100,22 @@ class AuthController extends AsyncNotifier<Usuario?> {
 final authControllerProvider = AsyncNotifierProvider<AuthController, Usuario?>(
   AuthController.new,
 );
+
+/// Rol del usuario logueado (`admin` | `medico` | `paciente`), o `null` sin
+/// sesion.
+final rolActualProvider = Provider<String?>((ref) {
+  return ref.watch(authControllerProvider).value?.rol;
+});
+
+/// `true` solo para el rol admin. El backend restringe la escritura de los
+/// catalogos (tratamientos, indicadores, categorias) a admin: la UI oculta esas
+/// acciones para que el medico no reciba un 403 al pulsarlas.
+final esAdminProvider = Provider<bool>((ref) {
+  return ref.watch(rolActualProvider) == 'admin';
+});
+
+/// `true` para el rol paciente.
+final esPacienteProvider = Provider<bool>((ref) {
+  final rol = ref.watch(rolActualProvider);
+  return rol == null || rol == 'paciente';
+});

@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Necesario para que la app hable con esclerosis-back. Estaba declarado
+         solo en los manifests de debug/profile, que NO se mergean en release:
+         la APK de produccion salia sin acceso a red. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Avisar al usuario si no hay red (connectivity_plus). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="esclerosis_mobile"
         android:name="${applicationName}"

@@ -91,17 +91,18 @@ class DashboardScreen extends ConsumerWidget {
         break;
       case 'medico':
         subtitle = 'Médico: ${usuario.username}';
-        // Stats: pacientes criticos / controlados a partir de los
-        // diagnosticos del medico logueado (ver manual, figura 9).
-        final diagnosticos = ref.watch(misDiagnosticosProvider).value;
-        if (diagnosticos != null) {
-          final criticos = diagnosticos.where((d) => d.esCritico).length;
-          final controlados = diagnosticos.length - criticos;
-          stats = [
-            RoleHeaderStat(label: 'Críticos', value: criticos),
-            RoleHeaderStat(label: 'Controlados', value: controlados),
-          ];
-        }
+        // Stats: PACIENTES criticos / controlados. Se piden al backend
+        // (`/diagnosticos/stats/:idMedico`), que toma el ultimo diagnostico de
+        // cada paciente; contarlos aca sobre la lista de diagnosticos hacia que
+        // un paciente con varios diagnosticos se contara varias veces.
+        final estadisticas = ref.watch(misEstadisticasProvider).value;
+        stats = [
+          RoleHeaderStat(label: 'Críticos', value: estadisticas?.criticos ?? '—'),
+          RoleHeaderStat(
+            label: 'Controlados',
+            value: estadisticas?.controlados ?? '—',
+          ),
+        ];
         cards = [
           ModuleCard(
             title: 'Tratamientos',
@@ -121,7 +122,10 @@ class DashboardScreen extends ConsumerWidget {
               final created = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(builder: (_) => const DiagnosticoFormScreen()),
               );
-              if (created == true) ref.invalidate(misDiagnosticosProvider);
+              if (created == true) {
+                ref.invalidate(misDiagnosticosProvider);
+                ref.invalidate(misEstadisticasProvider);
+              }
             },
           ),
           ModuleCard(

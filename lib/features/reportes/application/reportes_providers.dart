@@ -13,20 +13,38 @@ final analyticsApiProvider = Provider<AnalyticsApi>((ref) {
 final reportesAnalyticsProvider = FutureProvider.autoDispose<ReportesAnalyticsData>((ref) async {
   final api = ref.read(analyticsApiProvider);
   final recetasApi = ref.read(recetasApiProvider);
+  final esPaciente = ref.watch(esPacienteProvider);
 
-  final hechosIndicadores = await api.getHechosIndicadores();
-  final indicadores = await api.getDimIndicadoresClinicos();
-  final medicos = await api.getDimMedicos();
-  final organizaciones = await api.getDimOrganizaciones();
-  final modelos = await api.getDimModelosIa();
-  final hechosRecetas = await api.getHechosRecetas();
-  final hechosPacientesEm = await api.getHechosPacientesEm();
-  final hechosPacientesAtendidos = await api.getHechosPacientesAtendidos();
+  // Se lanzan todas juntas y se esperan despues: antes eran 8 peticiones
+  // secuenciales, cada una esperando a la anterior (el requisito no funcional
+  // pide reportes en menos de 10 s).
+  final hechosIndicadoresF = api.getHechosIndicadores();
+  final indicadoresF = api.getDimIndicadoresClinicos();
+  final medicosF = api.getDimMedicos();
+  final organizacionesF = api.getDimOrganizaciones();
+  final modelosF = api.getDimModelosIa();
+  final hechosRecetasF = api.getHechosRecetas();
+  final hechosPacientesEmF = api.getHechosPacientesEm();
+  final hechosPacientesAtendidosF = api.getHechosPacientesAtendidos();
 
+  final hechosIndicadores = await hechosIndicadoresF;
+  final indicadores = await indicadoresF;
+  final medicos = await medicosF;
+  final organizaciones = await organizacionesF;
+  final modelos = await modelosF;
+  final hechosRecetas = await hechosRecetasF;
+  final hechosPacientesEm = await hechosPacientesEmF;
+  final hechosPacientesAtendidos = await hechosPacientesAtendidosF;
+
+  // `/recetas` es solo para personal clinico (devolvia las recetas de todos los
+  // pacientes). El paciente no ve la pestaña de dominancia de IA, que es la
+  // unica que usa este fallback.
   var recetasTransaccionales = <Receta>[];
-  try {
-    recetasTransaccionales = await recetasApi.getAll();
-  } catch (_) {}
+  if (!esPaciente) {
+    try {
+      recetasTransaccionales = await recetasApi.getAll();
+    } catch (_) {}
+  }
 
   return ReportesAnalyticsData(
     hechosIndicadores: hechosIndicadores,

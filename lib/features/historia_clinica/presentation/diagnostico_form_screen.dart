@@ -305,6 +305,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
                                     DropdownMenuItem(value: 'leve', child: Text('Leve')),
                                     DropdownMenuItem(value: 'moderado', child: Text('Moderado')),
                                     DropdownMenuItem(value: 'severo', child: Text('Severo')),
+                                    DropdownMenuItem(value: 'crítico', child: Text('Crítico')),
                                   ],
                                   onChanged: _aplicarPlantilla,
                                 ),

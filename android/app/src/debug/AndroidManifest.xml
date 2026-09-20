@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Solo en debug: el backend local corre en http (10.0.2.2:3000). Android
+         9+ bloquea texto plano por defecto. En release NO se habilita, asi que
+         el API tiene que servirse por https (ver env/prod.json). -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

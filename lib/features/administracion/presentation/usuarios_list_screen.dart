@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/validation/password_policy.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../../../core/widgets/initials_avatar.dart';
@@ -43,6 +44,10 @@ class UsuariosListScreen extends ConsumerWidget {
           label: 'Nueva contraseña (opcional)',
           initialValue: '',
           required: false,
+          obscureText: true,
+          // Misma politica que el backend: si se deja vacio no se cambia.
+          validator: (value) =>
+              PasswordPolicy.validate(value, requerida: false),
         ),
       ],
     );

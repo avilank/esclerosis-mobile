@@ -32,6 +32,20 @@ class DiagnosticoApi {
     }
   }
 
+  /// Estadisticas del medico logueado: `criticos` y `controlados` contando UN
+  /// diagnostico por paciente (el mas reciente). Calcularlo en el cliente sobre
+  /// la lista de diagnosticos contaba varias veces al mismo paciente.
+  Future<MedicoStats> getStatsByMedico(int idMedico) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/diagnosticos/stats/$idMedico',
+      );
+      return MedicoStats.fromJson(response.data ?? const {});
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<Diagnostico> create({
     required int idHistoriaClinica,
     required int idMedico,
@@ -91,5 +105,29 @@ class DiagnosticoApi {
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
+  }
+}
+
+/// Respuesta de `GET /api/diagnosticos/stats/:idMedico`.
+class MedicoStats {
+  const MedicoStats({
+    this.total = 0,
+    this.criticos = 0,
+    this.controlados = 0,
+    this.iniciales = 0,
+  });
+
+  final int total;
+  final int criticos;
+  final int controlados;
+  final int iniciales;
+
+  factory MedicoStats.fromJson(Map<String, dynamic> json) {
+    return MedicoStats(
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      criticos: (json['criticos'] as num?)?.toInt() ?? 0,
+      controlados: (json['controlados'] as num?)?.toInt() ?? 0,
+      iniciales: (json['iniciales'] as num?)?.toInt() ?? 0,
+    );
   }
 }

@@ -12,6 +12,8 @@ class SimpleFormField {
     this.initialValue,
     this.required = true,
     this.maxLines = 1,
+    this.obscureText = false,
+    this.validator,
   });
 
   final String key;
@@ -19,6 +21,11 @@ class SimpleFormField {
   final String? initialValue;
   final bool required;
   final int maxLines;
+  final bool obscureText;
+
+  /// Validacion extra del campo (ej. la politica de contraseñas). Se aplica
+  /// despues del chequeo de "Requerido".
+  final String? Function(String? value)? validator;
 }
 
 Future<Map<String, String>?> showSimpleFormSheet(
@@ -107,10 +114,14 @@ class _SimpleFormDialogContentState extends State<_SimpleFormDialogContent> {
               TextFormField(
                 controller: _controllers[field.key],
                 decoration: const InputDecoration(),
-                maxLines: field.maxLines,
-                validator: field.required
-                    ? (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null
-                    : null,
+                maxLines: field.obscureText ? 1 : field.maxLines,
+                obscureText: field.obscureText,
+                validator: (v) {
+                  if (field.required && (v == null || v.trim().isEmpty)) {
+                    return 'Requerido';
+                  }
+                  return field.validator?.call(v);
+                },
               ),
               const SizedBox(height: 12),
             ],

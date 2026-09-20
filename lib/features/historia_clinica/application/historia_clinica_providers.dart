@@ -102,3 +102,11 @@ final misDiagnosticosProvider = FutureProvider.autoDispose<List<Diagnostico>>((r
   if (usuario == null) return const [];
   return ref.read(historiaClinicaRepositoryProvider).diagnosticosDeMedico(usuario.id);
 });
+
+/// Estadisticas del medico logueado (criticos / controlados por paciente),
+/// calculadas en el backend.
+final misEstadisticasProvider = FutureProvider.autoDispose<MedicoStats>((ref) async {
+  final usuario = ref.watch(authControllerProvider).value;
+  if (usuario == null) return const MedicoStats();
+  return ref.read(diagnosticoApiProvider).getStatsByMedico(usuario.id);
+});

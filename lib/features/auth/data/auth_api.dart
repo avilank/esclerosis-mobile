@@ -40,11 +40,11 @@ class AuthApi {
     }
   }
 
-  /// `POST /auth/register`. A diferencia de `login`, la respuesta es plana
-  /// (`{ id, email, dni, rol, token }`, sin `username`) y el backend siempre
-  /// asigna el rol `paciente` a las cuentas creadas por este endpoint (ver
-  /// `AuthService.register`). Se conserva el `username` ingresado en el
-  /// formulario porque el backend no lo devuelve.
+  /// `POST /auth/register`. Devuelve la misma forma que `login`
+  /// (`{ token, user: { id, email, username, rol } }`) y el backend siempre
+  /// asigna el rol `paciente` a las cuentas creadas por este endpoint, creando
+  /// tambien su ficha de paciente y su historia clinica (ver
+  /// `AuthService.register`).
   Future<AuthSession> register({
     required String username,
     required String email,
@@ -58,20 +58,14 @@ class AuthApi {
 
       final data = response.data;
       final token = data?['token'] as String?;
-      if (token == null) {
+      final userJson = data?['user'] as Map<String, dynamic>?;
+      if (token == null || userJson == null) {
         throw const ApiException(
           message: 'Respuesta de registro inválida del servidor',
         );
       }
 
-      final usuario = Usuario(
-        id: data?['id'] as int? ?? 0,
-        email: data?['email'] as String? ?? email,
-        username: username,
-        rol: data?['rol'] as String? ?? 'paciente',
-      );
-
-      return AuthSession(token: token, usuario: usuario);
+      return AuthSession(token: token, usuario: Usuario.fromJson(userJson));
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

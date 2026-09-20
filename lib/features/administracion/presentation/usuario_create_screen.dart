@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../application/administracion_providers.dart';
+import '../../../core/validation/password_policy.dart';
 import '../domain/rol.dart';
 
 const _generos = ['Masculino', 'Femenino', 'Otro'];
@@ -74,6 +75,12 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un rol')));
       return;
     }
+    if (_esPaciente && _fechaNacimiento == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona la fecha de nacimiento')),
+      );
+      return;
+    }
 
     final body = <String, dynamic>{
       'username': _usernameController.text.trim(),
@@ -98,7 +105,8 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
         'generoPaciente': _generoPaciente,
         'direccionPaciente': _direccionController.text.trim(),
         'telefonoPaciente': _telefonoController.text.trim(),
-        'fechaNacimiento': _fechaNacimiento?.toIso8601String(),
+        'fechaNacimiento':
+            _fechaNacimiento?.toIso8601String().substring(0, 10),
       });
     }
 
@@ -147,8 +155,11 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Contraseña'),
-                  validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña',
+                    helperText: PasswordPolicy.helperText,
+                  ),
+                  validator: PasswordPolicy.validate,
                 ),
                 const SizedBox(height: AppSpacing.s3),
                 rolesAsync.when(
@@ -161,6 +172,7 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                         .map((rol) => DropdownMenuItem(value: rol, child: Text(rol.nombre)))
                         .toList(),
                     onChanged: (value) => setState(() => _rolSeleccionado = value),
+                    validator: (value) => value == null ? 'Selecciona un rol' : null,
                   ),
                 ),
                 if (_esMedico) ...[
@@ -175,9 +187,11 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                   const SizedBox(height: AppSpacing.s3),
                   DropdownButtonFormField<String>(
                     initialValue: _generoMedico,
-                    decoration: const InputDecoration(labelText: 'Género'),
+                    decoration: const InputDecoration(labelText: 'Género *'),
                     items: _generos.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                     onChanged: (value) => setState(() => _generoMedico = value),
+                    // `medico.genero` es NOT NULL en la base.
+                    validator: (value) => value == null ? 'Requerido' : null,
                   ),
                   const SizedBox(height: AppSpacing.s3),
                   areasAsync.when(
@@ -190,6 +204,7 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                           .map((a) => DropdownMenuItem(value: a.idArea, child: Text(a.descripcion)))
                           .toList(),
                       onChanged: (value) => setState(() => _idArea = value),
+                      validator: (value) => value == null ? 'Requerido' : null,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s3),
@@ -203,6 +218,7 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                           .map((s) => DropdownMenuItem(value: s.idSede, child: Text(s.nombre)))
                           .toList(),
                       onChanged: (value) => setState(() => _idSede = value),
+                      validator: (value) => value == null ? 'Requerido' : null,
                     ),
                   ),
                 ],
@@ -226,15 +242,18 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
                     controller: _edadController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Edad'),
-                    validator: (v) =>
-                        (v == null || (int.tryParse(v) ?? 0) <= 0) ? 'Edad inválida' : null,
+                    validator: (v) {
+                      final edad = int.tryParse(v ?? '') ?? -1;
+                      return (edad <= 0 || edad > 120) ? 'Edad inválida (1-120)' : null;
+                    },
                   ),
                   const SizedBox(height: AppSpacing.s3),
                   DropdownButtonFormField<String>(
                     initialValue: _generoPaciente,
-                    decoration: const InputDecoration(labelText: 'Género'),
+                    decoration: const InputDecoration(labelText: 'Género *'),
                     items: _generos.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                     onChanged: (value) => setState(() => _generoPaciente = value),
+                    validator: (value) => value == null ? 'Requerido' : null,
                   ),
                   const SizedBox(height: AppSpacing.s3),
                   TextFormField(

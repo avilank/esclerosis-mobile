@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/validation/password_policy.dart';
 import '../application/auth_providers.dart';
 
 /// Registro de cuenta nueva. `esclerosis-back` siempre asigna el rol
@@ -98,14 +99,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscure,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
+                    helperText: PasswordPolicy.helperText,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (value) =>
-                      (value == null || value.length < 6) ? 'Mínimo 6 caracteres' : null,
+                  validator: PasswordPolicy.validate,
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 TextFormField(

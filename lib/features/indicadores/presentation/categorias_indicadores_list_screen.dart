@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
+import '../../auth/application/auth_providers.dart';
 import '../application/indicadores_providers.dart';
 import '../domain/categoria_indicador.dart';
 import 'categoria_form_sheet.dart';
@@ -17,6 +18,8 @@ class CategoriasIndicadoresListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriasAsync = ref.watch(categoriasIndicadoresListProvider);
     final api = ref.read(categoriasIndicadoresApiProvider);
+    // El backend restringe la escritura de este catalogo al rol admin.
+    final esAdmin = ref.watch(esAdminProvider);
 
     Future<void> crear() async {
       final data = await showCategoriaFormSheet(context);
@@ -35,7 +38,7 @@ class CategoriasIndicadoresListScreen extends ConsumerWidget {
       title: 'Categorías de indicadores',
       searchHint: 'Buscar categoría por nombre',
       async: categoriasAsync,
-      onAdd: crear,
+      onAdd: esAdmin ? crear : null,
       onBack: () => Navigator.of(context).pop(),
       onRefresh: () => ref.refresh(categoriasIndicadoresListProvider.future),
       filter: (c, query) => c.descripcion.toLowerCase().contains(query),
@@ -48,7 +51,9 @@ class CategoriasIndicadoresListScreen extends ConsumerWidget {
         title: categoria.descripcion,
         subtitle: 'Categoría clínica',
         subtitleIcon: Icons.folder_outlined,
-        actions: [
+        actions: !esAdmin || categoria.bloqueado
+            ? const []
+            : [
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 20),
             onPressed: () async {
