@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Configuracion de entorno, inyectada en compilacion con
 /// `--dart-define-from-file=env/dev.json` (o `env/prod.json`).
 ///
@@ -8,14 +10,29 @@ class AppEnv {
 
   /// URL base del backend (esclerosis-back), incluyendo el prefijo `/api`.
   ///
-  /// Emulador Android: `http://10.0.2.2:3000/api` (esclerosis-back corre en
-  /// el puerto 3000, ver `esclerosis-back/src/main.ts`).
-  /// Dispositivo fisico en la misma red: usar la IP LAN de la maquina que
-  /// corre el backend, ej. `http://192.168.1.51:3000/api`.
-  static const String apiBaseUrl = String.fromEnvironment(
+  /// Emulador Android: `http://10.0.2.2:3000/api` (alias del localhost de la
+  /// PC). Escritorio / iOS / web: `http://127.0.0.1:3000/api`.
+  /// Dispositivo fisico en la misma red: pasar la IP LAN con
+  /// `--dart-define=API_BASE_URL=http://192.168.1.51:3000/api`.
+  static const String _apiBaseUrlFromEnv = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/api',
   );
+
+  static String get apiBaseUrl {
+    final fromEnv = _apiBaseUrlFromEnv;
+    final resolved = fromEnv.isNotEmpty
+        ? fromEnv
+        : (defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:3000/api'
+            : 'http://127.0.0.1:3000/api');
+
+    // `10.0.2.2` solo existe dentro del emulador Android.
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        resolved.contains('10.0.2.2')) {
+      return resolved.replaceFirst('10.0.2.2', '127.0.0.1');
+    }
+    return resolved;
+  }
 
   /// Nombre del entorno activo (dev | staging | prod).
   static const String envName = String.fromEnvironment(
