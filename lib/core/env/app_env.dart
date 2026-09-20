@@ -10,10 +10,10 @@ class AppEnv {
 
   /// URL base del backend (esclerosis-back), incluyendo el prefijo `/api`.
   ///
-  /// Emulador Android: `http://10.0.2.2:3000/api` (alias del localhost de la
-  /// PC). Escritorio / iOS / web: `http://127.0.0.1:3000/api`.
+  /// Emulador Android: `http://10.0.2.2:4027/api` (alias del localhost de la
+  /// PC). Escritorio / iOS / web: `http://127.0.0.1:4027/api`.
   /// Dispositivo fisico en la misma red: pasar la IP LAN con
-  /// `--dart-define=API_BASE_URL=http://192.168.1.51:3000/api`.
+  /// `--dart-define=API_BASE_URL=http://192.168.1.51:4027/api`.
   static const String _apiBaseUrlFromEnv = String.fromEnvironment(
     'API_BASE_URL',
   );
@@ -23,8 +23,8 @@ class AppEnv {
     final resolved = fromEnv.isNotEmpty
         ? fromEnv
         : (defaultTargetPlatform == TargetPlatform.android
-            ? 'http://10.0.2.2:3000/api'
-            : 'http://127.0.0.1:3000/api');
+            ? 'http://10.0.2.2:4027/api'
+            : 'http://127.0.0.1:4027/api');
 
     // `10.0.2.2` solo existe dentro del emulador Android.
     if (defaultTargetPlatform != TargetPlatform.android &&

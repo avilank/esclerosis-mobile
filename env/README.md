@@ -5,8 +5,7 @@ compilación. No se leen en runtime: sus valores quedan embebidos en el binario.
 
 - `dev.json`: apunta al emulador Android corriendo `esclerosis-back`
   localmente (`10.0.2.2` es el alias del `localhost` de la PC visto desde el
-  emulador). Puerto `3000` porque así lo define
-  `esclerosis-back/src/main.ts`.
+  emulador). Puerto `4027`, el mismo de `esclerosis-back/.env`.
 - `prod.json`: reemplazar `API_BASE_URL` por el dominio real donde se
   despliegue `esclerosis-back` antes de compilar un release.
 
@@ -23,5 +22,5 @@ Reemplazar `10.0.2.2` por la IP LAN de la máquina que corre el backend, por
 ejemplo:
 
 ```json
-{ "API_BASE_URL": "http://192.168.1.51:3000/api", "ENV_NAME": "dev" }
+{ "API_BASE_URL": "http://192.168.1.51:4027/api", "ENV_NAME": "dev" }
 ```

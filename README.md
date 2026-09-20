@@ -10,7 +10,7 @@ flutter pub get
 flutter run --dart-define-from-file=env/dev.json
 ```
 
-`env/dev.json` apunta a `http://10.0.2.2:3000/api` (el `localhost` de la PC visto
+`env/dev.json` apunta a `http://10.0.2.2:4027/api` (el `localhost` de la PC visto
 desde el emulador Android). Para un dispositivo físico en la misma red, cambiá
 esa URL por la IP LAN de la máquina que corre el backend. Ver `env/README.md`.
 
@@ -66,7 +66,7 @@ lib/
     historia_clinica/   historias, diagnósticos, indicadores del diagnóstico, receta IA
     indicadores/        catálogo de categorías e indicadores clínicos
     tratamientos/       catálogo de DMT
-    reportes/           gráficos sobre el data warehouse
+    reportes/           gráficos sobre dimensiones y hechos de la API
     informacion/        contenido educativo
 ```
 

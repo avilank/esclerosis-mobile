@@ -1,6 +1,6 @@
 import '../../historia_clinica/domain/receta.dart';
 
-/// Modelos del data warehouse (`esclerosisd`) usados en Reportes.
+/// Modelos de reportes (dimensiones y hechos en la base principal).
 
 class DimIndicadorClinico {
   const DimIndicadorClinico({
