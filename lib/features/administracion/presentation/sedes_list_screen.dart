@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/administracion_providers.dart';
@@ -37,18 +38,19 @@ class SedesListScreen extends ConsumerWidget {
         ],
       );
       if (data == null) return;
-      try {
-        if (id == null) {
-          await api.create(data);
-        } else {
-          await api.update(id, data);
-        }
-        ref.invalidate(sedesListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          if (id == null) {
+            await api.create(data);
+          } else {
+            await api.update(id, data);
+          }
+          ref.invalidate(sedesListProvider);
+        },
+        success: id == null ? 'Sede creada' : 'Sede actualizada',
+      );
     }
 
     return CrudListScaffold<Sede>(
@@ -85,14 +87,15 @@ class SedesListScreen extends ConsumerWidget {
                 message: '¿Eliminar "${sede.nombre}"?',
               );
               if (!confirmed) return;
-              try {
-                await api.remove(sede.idSede);
-                ref.invalidate(sedesListProvider);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
+              if (!context.mounted) return;
+              await AppToast.run(
+                context,
+                action: () async {
+                  await api.remove(sede.idSede);
+                  ref.invalidate(sedesListProvider);
+                },
+                success: 'Sede eliminada',
+              );
             },
           ),
         ],

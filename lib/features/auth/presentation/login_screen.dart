@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../application/auth_providers.dart';
 
 /// Pantalla de login con el estilo "SCLERK / MEDICAL PORTAL" de
@@ -38,10 +39,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
 
     final error = ref.read(authControllerProvider).error;
-    if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+    if (!mounted) return;
+    if (error != null) {
+      AppToast.error(context, error, fallback: 'No se pudo iniciar sesión');
+    } else {
+      AppToast.success(context, 'Sesión iniciada');
     }
   }
 

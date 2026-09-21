@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/historia_clinica_providers.dart';
@@ -38,14 +39,15 @@ class DiagnosticosListScreen extends ConsumerWidget {
       message: '¿Eliminar el diagnóstico de $nombre?',
     );
     if (!confirmed) return;
-    try {
-      await ref.read(historiaClinicaRepositoryProvider).eliminarDiagnostico(d.idDiagnostico);
-      ref.invalidate(misDiagnosticosProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
+    if (!context.mounted) return;
+    await AppToast.run(
+      context,
+      action: () async {
+        await ref.read(historiaClinicaRepositoryProvider).eliminarDiagnostico(d.idDiagnostico);
+        ref.invalidate(misDiagnosticosProvider);
+      },
+      success: 'Diagnóstico eliminado',
+    );
   }
 
   @override

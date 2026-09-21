@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/validation/password_policy.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../application/auth_providers.dart';
 
 /// Registro de cuenta nueva. `esclerosis-back` siempre asigna el rol
@@ -43,8 +44,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
 
     final error = ref.read(authControllerProvider).error;
-    if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    if (!mounted) return;
+    if (error != null) {
+      AppToast.error(context, error, fallback: 'No se pudo crear la cuenta');
+    } else {
+      AppToast.success(context, 'Cuenta creada');
     }
   }
 
