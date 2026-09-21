@@ -23,6 +23,9 @@ import 'package:esclerosis_mobile/features/historia_clinica/data/recetas_api.dar
 import 'package:esclerosis_mobile/features/indicadores/data/indicadores_api.dart';
 import 'package:esclerosis_mobile/features/reportes/data/analytics_api.dart';
 import 'package:esclerosis_mobile/features/tratamientos/data/tratamientos_api.dart';
+import 'package:esclerosis_mobile/features/citas/data/citas_api.dart';
+import 'package:esclerosis_mobile/features/citas/data/pacientes_alta_api.dart';
+import 'package:esclerosis_mobile/features/citas/domain/cita.dart';
 
 const _baseUrl = 'http://127.0.0.1:4027/api';
 
@@ -72,6 +75,7 @@ void main() {
     String? tokenAdmin;
     String? tokenMedico;
     String? tokenPaciente;
+    String? tokenSecretaria;
     int idMedico = 0;
     int idPaciente = 0;
 
@@ -97,6 +101,10 @@ void main() {
           email: 'paciente.demo@esclerosis.com', password: 'password123');
       tokenPaciente = paciente.token;
       idPaciente = paciente.usuario.id;
+
+      final secretaria = await auth.login(
+          email: 'secretaria.demo@esclerosis.com', password: 'password123');
+      tokenSecretaria = secretaria.token;
     });
 
     test('login parsea token y rol de los tres roles', () async {
@@ -219,6 +227,112 @@ void main() {
       }
       expect(em, isA<List>());
       expect(atendidos, isA<List>());
+    });
+
+    test('login de la secretaria devuelve rol "secretaria"', () async {
+      if (!disponible) return;
+      final s = await AuthApi(_dio()).login(
+        email: 'secretaria.demo@esclerosis.com',
+        password: 'password123',
+      );
+      expect(s.usuario.rol, 'secretaria');
+    });
+
+    test('la secretaria lista citas y parsea el modelo', () async {
+      if (!disponible) return;
+      final citas = await CitasApi(_dio(token: tokenSecretaria)).getAll();
+      expect(citas, isA<List<Cita>>());
+      for (final cita in citas) {
+        // El backend normaliza la columna `time` a HH:mm.
+        expect(cita.horaCita, matches(r'^\d{2}:\d{2}$'));
+        expect(cita.fechaCita, matches(r'^\d{4}-\d{2}-\d{2}$'));
+      }
+    });
+
+    test('la agenda de hoy responde para la secretaria', () async {
+      if (!disponible) return;
+      final hoy = await CitasApi(_dio(token: tokenSecretaria)).getHoy();
+      expect(hoy, isA<List<Cita>>());
+    });
+
+    test('la secretaria da de alta un paciente y le agenda una cita', () async {
+      if (!disponible) return;
+      final sufijo = DateTime.now().millisecondsSinceEpoch
+          .toString()
+          .substring(7);
+
+      final paciente = await PacientesAltaApi(_dio(token: tokenSecretaria)).crear(
+        username: 'pac_t$sufijo',
+        email: 'pac.t$sufijo@demo.com',
+        password: 'password123',
+        dniPaciente: '8$sufijo'.padRight(8, '0').substring(0, 8),
+        nombrePaciente: 'Paciente Test $sufijo',
+        edadPaciente: 30,
+        generoPaciente: 'Femenino',
+        fechaNacimiento: '1996-02-02',
+      );
+      expect(paciente.idPaciente, greaterThan(0));
+
+      // Fecha única por corrida: el test agenda de verdad y el backend rechaza
+      // (409) el mismo médico + fecha + hora.
+      final fecha = DateTime(2028, 1, 1)
+          .add(Duration(days: DateTime.now().millisecondsSinceEpoch % 900))
+          .toIso8601String()
+          .substring(0, 10);
+
+      final cita = await CitasApi(_dio(token: tokenSecretaria)).create(
+        idPaciente: paciente.idPaciente,
+        idMedico: idMedico,
+        fechaCita: fecha,
+        horaCita: '08:30',
+        motivo: 'Alta desde test de integración',
+      );
+      expect(cita.idCita, greaterThan(0));
+      expect(cita.estado, EstadoCita.programada);
+      expect(cita.horaCita, '08:30');
+      expect(cita.fechaCita, fecha);
+
+      // Choque: mismo médico, misma fecha y hora -> 409.
+      await expectLater(
+        CitasApi(_dio(token: tokenSecretaria)).create(
+          idPaciente: idPaciente,
+          idMedico: idMedico,
+          fechaCita: fecha,
+          horaCita: '08:30',
+        ),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 409)),
+      );
+    });
+
+    test('la secretaria NO puede crear diagnósticos (403)', () async {
+      if (!disponible) return;
+      final res = await _dio(token: tokenSecretaria).post<dynamic>(
+        '/diagnosticos',
+        data: const <String, dynamic>{},
+        options: Options(validateStatus: (_) => true),
+      );
+      expect(res.statusCode, 403);
+    });
+
+    test('el paciente ve solo sus citas', () async {
+      if (!disponible) return;
+      final citas = await CitasApi(_dio(token: tokenPaciente)).getAll();
+      for (final cita in citas) {
+        expect(cita.idPaciente, idPaciente);
+      }
+    });
+
+    test('el paciente NO puede agendar (403)', () async {
+      if (!disponible) return;
+      await expectLater(
+        CitasApi(_dio(token: tokenPaciente)).create(
+          idPaciente: idPaciente,
+          idMedico: idMedico,
+          fechaCita: '2026-11-04',
+          horaCita: '09:00',
+        ),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 403)),
+      );
     });
 
     test('el paciente puede leer reportes pero no disparar el ETL', () async {

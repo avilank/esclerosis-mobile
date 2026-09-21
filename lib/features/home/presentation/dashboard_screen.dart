@@ -8,6 +8,10 @@ import '../../administracion/application/administracion_providers.dart';
 import '../../administracion/presentation/areas_list_screen.dart';
 import '../../administracion/presentation/sedes_list_screen.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../citas/application/citas_providers.dart';
+import '../../citas/domain/cita.dart';
+import '../../citas/presentation/citas_list_screen.dart';
+import '../../citas/presentation/pacientes_list_screen.dart';
 import '../../historia_clinica/application/historia_clinica_providers.dart';
 import '../../historia_clinica/presentation/diagnostico_form_screen.dart';
 import '../../historia_clinica/presentation/diagnosticos_admin_list_screen.dart';
@@ -52,6 +56,11 @@ class DashboardScreen extends ConsumerWidget {
           RoleHeaderStat(label: 'Sedes', value: sedesCount ?? '—'),
         ];
         cards = [
+          ModuleCard(
+            title: 'Citas',
+            icon: Icons.event_available_outlined,
+            onTap: () => _open(context, const CitasListScreen()),
+          ),
           ModuleCard(
             title: 'Historia Clínica',
             icon: Icons.folder_shared_outlined,
@@ -114,24 +123,52 @@ class DashboardScreen extends ConsumerWidget {
             icon: Icons.bar_chart_outlined,
             onTap: () => _open(context, const IndicadoresHomeScreen()),
           ),
+          // Antes esto abría un formulario vacío. Ahora el médico diagnostica
+          // atendiendo una cita (el backend rechaza el diagnóstico sin cita),
+          // así que la tarjeta lleva a su agenda.
           ModuleCard(
-            title: 'Diagnosticar',
-            subtitle: 'Crear un nuevo diagnóstico',
-            icon: Icons.add_chart_outlined,
-            onTap: () async {
-              final created = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(builder: (_) => const DiagnosticoFormScreen()),
-              );
-              if (created == true) {
-                ref.invalidate(misDiagnosticosProvider);
-                ref.invalidate(misEstadisticasProvider);
-              }
-            },
+            title: 'Citas de hoy',
+            subtitle: 'Atender y registrar diagnósticos',
+            icon: Icons.event_available_outlined,
+            onTap: () => _open(context, const CitasListScreen()),
           ),
           ModuleCard(
             title: 'Información',
             icon: Icons.info_outline,
             onTap: () => _open(context, const InformacionScreen()),
+          ),
+        ];
+        break;
+      case 'secretaria':
+        subtitle = 'Secretaría: ${usuario.username}';
+        // Stats del día: programadas / atendidas / canceladas.
+        final citasHoy = ref.watch(citasHoyStatsProvider).value;
+        stats = [
+          RoleHeaderStat(
+            label: 'Programadas',
+            value: citasHoy?[EstadoCita.programada] ?? 0,
+          ),
+          RoleHeaderStat(
+            label: 'Atendidas',
+            value: citasHoy?[EstadoCita.atendida] ?? 0,
+          ),
+          RoleHeaderStat(
+            label: 'Canceladas',
+            value: citasHoy?[EstadoCita.cancelada] ?? 0,
+          ),
+        ];
+        cards = [
+          ModuleCard(
+            title: 'Citas',
+            subtitle: 'Agendar y gestionar',
+            icon: Icons.event_available_outlined,
+            onTap: () => _open(context, const CitasListScreen()),
+          ),
+          ModuleCard(
+            title: 'Pacientes',
+            subtitle: 'Padrón y altas',
+            icon: Icons.people_outline,
+            onTap: () => _open(context, const PacientesListScreen()),
           ),
         ];
         break;
@@ -143,6 +180,11 @@ class DashboardScreen extends ConsumerWidget {
           RoleHeaderStat(label: 'Diagnósticos', value: historia?.diagnosticos.length ?? 0),
         ];
         cards = [
+          ModuleCard(
+            title: 'Mis citas',
+            icon: Icons.event_outlined,
+            onTap: () => _open(context, const CitasListScreen()),
+          ),
           ModuleCard(
             title: 'Mi historia clínica',
             icon: Icons.folder_shared_outlined,

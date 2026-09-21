@@ -22,6 +22,7 @@ class Diagnostico {
     this.indicadores = const [],
     this.idHistoriaClinica,
     this.idMedico,
+    this.idCita,
   });
 
   final int idDiagnostico;
@@ -37,6 +38,12 @@ class Diagnostico {
   final int? idHistoriaClinica;
   final int? idMedico;
 
+  /// Cita que originó el diagnóstico. `null` en los diagnósticos anteriores al
+  /// módulo de citas y en los que crea el admin a mano.
+  final int? idCita;
+
+  bool get tieneCita => idCita != null;
+
   bool get esCritico => estadoSalud.toLowerCase() == 'crítico' ||
       estadoSalud.toLowerCase() == 'critico';
 
@@ -48,6 +55,7 @@ class Diagnostico {
     final indicadoresJson = json['IndicadoresClinicos'] as List<dynamic>?;
     return Diagnostico(
       idDiagnostico: json['idDiagnostico'] as int,
+      idCita: (json['idCita'] as num?)?.toInt(),
       fechaDiagnostico: json['fechaDiagnostico'] as String? ?? '',
       estadoSalud: json['estadoSalud'] as String? ?? '',
       gradoEnfermedad: json['gradoEnfermedad'] as String? ?? '',

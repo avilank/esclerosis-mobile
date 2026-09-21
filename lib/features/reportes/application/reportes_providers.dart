@@ -13,7 +13,9 @@ final analyticsApiProvider = Provider<AnalyticsApi>((ref) {
 final reportesAnalyticsProvider = FutureProvider.autoDispose<ReportesAnalyticsData>((ref) async {
   final api = ref.read(analyticsApiProvider);
   final recetasApi = ref.read(recetasApiProvider);
-  final esPaciente = ref.watch(esPacienteProvider);
+  // `/recetas` es solo para personal clinico (admin y medico).
+  final rol = ref.watch(rolActualProvider);
+  final puedeVerRecetas = rol == 'admin' || rol == 'medico';
 
   // Se lanzan todas juntas y se esperan despues: antes eran 8 peticiones
   // secuenciales, cada una esperando a la anterior (el requisito no funcional
@@ -36,11 +38,10 @@ final reportesAnalyticsProvider = FutureProvider.autoDispose<ReportesAnalyticsDa
   final hechosPacientesEm = await hechosPacientesEmF;
   final hechosPacientesAtendidos = await hechosPacientesAtendidosF;
 
-  // `/recetas` es solo para personal clinico (devolvia las recetas de todos los
-  // pacientes). El paciente no ve la pestaña de dominancia de IA, que es la
-  // unica que usa este fallback.
+  // Solo la pestaña de dominancia de IA usa este fallback, y solo la ven los
+  // roles clínicos.
   var recetasTransaccionales = <Receta>[];
-  if (!esPaciente) {
+  if (puedeVerRecetas) {
     try {
       recetasTransaccionales = await recetasApi.getAll();
     } catch (_) {}

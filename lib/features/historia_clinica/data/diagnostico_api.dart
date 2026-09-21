@@ -54,6 +54,7 @@ class DiagnosticoApi {
     required String gradoEnfermedad,
     String? observaciones,
     bool esDiagnosticoInicial = false,
+    int? idCita,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -61,6 +62,9 @@ class DiagnosticoApi {
         data: {
           'idhistoriaClinica': idHistoriaClinica,
           'idMedico': idMedico,
+          // Un medico solo puede diagnosticar atendiendo una cita; el admin no
+          // manda `idCita`.
+          if (idCita != null) 'idCita': idCita,
           'fechaDiagnostico': fechaDiagnostico.toIso8601String(),
           'estadoSalud': estadoSalud,
           'gradoEnfermedad': gradoEnfermedad,

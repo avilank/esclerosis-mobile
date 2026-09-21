@@ -28,6 +28,7 @@ class CrudListScaffold<T> extends StatefulWidget {
     this.onAdd,
     this.onRefresh,
     this.onBack,
+    this.header,
   });
 
   final String title;
@@ -41,6 +42,10 @@ class CrudListScaffold<T> extends StatefulWidget {
   final VoidCallback? onAdd;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onBack;
+
+  /// Widget opcional entre el buscador y la lista (filtros propios de la
+  /// pantalla, p. ej. fecha y estado en Citas).
+  final Widget? header;
 
   @override
   State<CrudListScaffold<T>> createState() => _CrudListScaffoldState<T>();
@@ -77,6 +82,8 @@ class _CrudListScaffoldState<T> extends State<CrudListScaffold<T>> {
                 ),
               ),
             ),
+            if (widget.header != null)
+              SliverToBoxAdapter(child: widget.header!),
             widget.async.when(
               loading: () => const SliverFillRemaining(child: LoadingView()),
               error: (error, _) => SliverFillRemaining(

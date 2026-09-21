@@ -15,6 +15,7 @@ import '../data/historia_clinica_repository.dart';
 import '../domain/historia_clinica.dart';
 import '../domain/medico.dart';
 import '../domain/plantillas_indicadores.dart';
+import '../../citas/domain/cita.dart';
 import 'receta_ia_screen.dart';
 
 const _estadosSalud = [
@@ -27,7 +28,12 @@ const _estadosSalud = [
 /// Formulario de creacion de diagnostico alineado a
 /// `esclerosis-movil/.../CreateDiagnosticoModal` (manual ESCLEROSIS - BI, fig. 37).
 class DiagnosticoFormScreen extends ConsumerStatefulWidget {
-  const DiagnosticoFormScreen({super.key});
+  const DiagnosticoFormScreen({super.key, this.cita});
+
+  /// Cita que se está atendiendo. Si viene, la historia clínica y el médico
+  /// quedan fijados por la cita y el POST manda `idCita` (el backend marca la
+  /// cita como `atendida`). Sin cita, solo el admin puede crear diagnósticos.
+  final Cita? cita;
 
   @override
   ConsumerState<DiagnosticoFormScreen> createState() => _DiagnosticoFormScreenState();
@@ -48,12 +54,41 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
   String? _plantillaNivel;
   bool _medicoAutoAsignado = false;
 
+  /// Con cita: la historia y el médico salen de ella y no se pueden cambiar.
+  Cita? get _cita => widget.cita;
+  bool get _esAtencionDeCita => _cita != null;
+
   @override
   void initState() {
     super.initState();
+
+    final cita = widget.cita;
+    if (cita != null) {
+      _idMedico = cita.idMedico;
+      _medicoAutoAsignado = true;
+      // La fecha del diagnóstico arranca en la de la cita.
+      _fecha = DateTime.tryParse(cita.fechaCita) ?? DateTime.now();
+      // La historia del paciente de la cita se resuelve del listado.
+      ref.listenManual(historiasClinicasActivasProvider, (previous, next) {
+        next.whenData(_fijarHistoriaDeLaCita);
+      });
+    }
+
     ref.listenManual(medicosActivosProvider, (previous, next) {
       next.whenData(_asignarMedicoSiCorresponde);
     });
+  }
+
+  /// Fija la historia clínica del paciente de la cita.
+  void _fijarHistoriaDeLaCita(List<HistoriaClinica> historias) {
+    final cita = widget.cita;
+    if (cita == null || _historiaSeleccionada != null) return;
+    final historia = historias
+        .where((h) => h.idPaciente == cita.idPaciente)
+        .firstOrNull;
+    if (historia != null && mounted) {
+      setState(() => _historiaSeleccionada = historia);
+    }
   }
 
   @override
@@ -131,6 +166,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
             observaciones: _observacionesController.text.trim(),
             esDiagnosticoInicial: _esInicial,
             indicadores: indicadores,
+            idCita: _cita?.idCita,
           );
       if (!mounted) return;
       await Navigator.of(context).push(
@@ -169,7 +205,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
       body: Column(
         children: [
           CrudListHeader(
-            title: 'Nuevo Diagnóstico',
+            title: _esAtencionDeCita ? 'Atender cita' : 'Nuevo Diagnóstico',
             onBack: () => Navigator.of(context).maybePop(),
           ),
           if (loadingData)
@@ -211,7 +247,11 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) => setState(() => _historiaSeleccionada = value),
+                                onChanged: _esAtencionDeCita
+                                    ? null
+                                    : (value) => setState(
+                                          () => _historiaSeleccionada = value,
+                                        ),
                                 validator: (value) => value == null ? 'Selecciona una historia clínica' : null,
                               );
                             },
@@ -238,7 +278,10 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
                                             ),
                                           )
                                           .toList(),
-                                      onChanged: isMedico ? null : (value) => setState(() => _idMedico = value),
+                                      onChanged: isMedico || _esAtencionDeCita
+                                          ? null
+                                          : (value) =>
+                                              setState(() => _idMedico = value),
                                       validator: (value) =>
                                           value == null ? 'Selecciona un médico' : null,
                                     );

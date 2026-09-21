@@ -114,8 +114,24 @@ final esAdminProvider = Provider<bool>((ref) {
   return ref.watch(rolActualProvider) == 'admin';
 });
 
-/// `true` para el rol paciente.
+/// `true` solo para el rol paciente. Antes trataba `null` como paciente, lo
+/// que ocultaba funciones a los demás roles mientras la sesión rehidrataba.
 final esPacienteProvider = Provider<bool>((ref) {
+  return ref.watch(rolActualProvider) == 'paciente';
+});
+
+/// `true` para el rol médico.
+final esMedicoProvider = Provider<bool>((ref) {
+  return ref.watch(rolActualProvider) == 'medico';
+});
+
+/// `true` para el rol secretaria (agenda citas y da de alta pacientes).
+final esSecretariaProvider = Provider<bool>((ref) {
+  return ref.watch(rolActualProvider) == 'secretaria';
+});
+
+/// Roles que pueden administrar la agenda (crear, reprogramar, cancelar).
+final puedeGestionarCitasProvider = Provider<bool>((ref) {
   final rol = ref.watch(rolActualProvider);
-  return rol == null || rol == 'paciente';
+  return rol == 'admin' || rol == 'secretaria';
 });

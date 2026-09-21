@@ -56,6 +56,7 @@ class HistoriaClinicaRepository {
     String? observaciones,
     bool esDiagnosticoInicial = false,
     List<IndicadorValor> indicadores = const [],
+    int? idCita,
   }) async {
     final diagnostico = await _diagnosticoApi.create(
       idHistoriaClinica: idHistoriaClinica,
@@ -65,6 +66,7 @@ class HistoriaClinicaRepository {
       gradoEnfermedad: gradoEnfermedad,
       observaciones: observaciones,
       esDiagnosticoInicial: esDiagnosticoInicial,
+      idCita: idCita,
     );
 
     final errores = <String>[];

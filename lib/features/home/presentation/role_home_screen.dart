@@ -5,6 +5,8 @@ import '../../../core/widgets/tab_root_navigator.dart';
 import '../../administracion/presentation/roles_permisos_screen.dart';
 import '../../administracion/presentation/usuarios_list_screen.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../citas/presentation/citas_list_screen.dart';
+import '../../citas/presentation/pacientes_list_screen.dart';
 import '../../historia_clinica/presentation/diagnosticos_list_screen.dart';
 import '../../historia_clinica/presentation/mis_pacientes_screen.dart';
 import '../../informacion/presentation/informacion_screen.dart';
@@ -44,14 +46,32 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
           _TabItem('Perfil', Icons.person_outline, ProfileScreen()),
         ];
       case 'medico':
+        // Citas primero: el médico entra a trabajar por su agenda del día.
         return const [
+          _TabItem('Citas', Icons.event_available_outlined, CitasListScreen()),
           _TabItem('Diagnósticos', Icons.add_circle_outline, DiagnosticosListScreen()),
           _TabItem('Historia Clínica', Icons.folder_shared_outlined, MisPacientesScreen()),
           _TabItem('Inicio', Icons.home_outlined, DashboardScreen()),
           _TabItem('Reportes', Icons.bar_chart_outlined, ReportesScreen()),
           _TabItem('Perfil', Icons.person_outline, ProfileScreen()),
         ];
+      case 'secretaria':
+        // Sin Reportes: la secretaria no tiene acceso a analytics.
+        return const [
+          _TabItem('Citas', Icons.event_available_outlined, CitasListScreen()),
+          _TabItem('Pacientes', Icons.people_outline, PacientesListScreen()),
+          _TabItem('Inicio', Icons.home_outlined, DashboardScreen()),
+          _TabItem('Perfil', Icons.person_outline, ProfileScreen()),
+        ];
+      case 'paciente':
+        return const [
+          _TabItem('Mis citas', Icons.event_outlined, CitasListScreen()),
+          _TabItem('Información', Icons.info_outline, InformacionScreen()),
+          _TabItem('Inicio', Icons.home_outlined, DashboardScreen()),
+          _TabItem('Perfil', Icons.person_outline, ProfileScreen()),
+        ];
       default:
+        // Rol desconocido: lo mínimo, sin datos clínicos de nadie.
         return const [
           _TabItem('Información', Icons.info_outline, InformacionScreen()),
           _TabItem('Inicio', Icons.home_outlined, DashboardScreen()),
@@ -63,7 +83,7 @@ class _RoleHomeScreenState extends ConsumerState<RoleHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final usuario = ref.watch(authControllerProvider).value;
-    final rol = usuario?.rol ?? 'paciente';
+    final rol = usuario?.rol ?? '';
     final tabs = _tabsFor(rol);
 
     if (_rolActual != rol) {

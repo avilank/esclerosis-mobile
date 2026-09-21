@@ -46,13 +46,35 @@ manifest de release no habilita tráfico en texto plano a propósito
 (`usesCleartextTraffic` está solo en el manifest de debug, para poder hablar con
 el backend local por http).
 
+## Citas
+
+La secretaria agenda y el médico atiende (ver «Módulo de citas» en
+`esclerosis-back/README.md`).
+
+- Tabs por rol: **secretaria** → Citas, Pacientes, Inicio, Perfil.
+  **médico** → Citas (primero), Diagnósticos, Historia Clínica, Inicio,
+  Reportes, Perfil. **paciente** → Mis citas, Información, Inicio, Perfil.
+  El admin abre la misma lista desde una tarjeta del dashboard.
+- `features/citas/` sigue el patrón del resto: `domain/` + `data/` +
+  `application/` + `presentation/`.
+- `DiagnosticoFormScreen(cita: ...)` es el modo «atender»: fija historia y
+  médico desde la cita y manda `idCita`. Sin cita solo entra el admin: el
+  backend devuelve 403 a un médico que no adjunte `idCita`.
+- La tarjeta «Diagnosticar» del dashboard del médico ahora lleva a su agenda,
+  no a un formulario vacío.
+
 ## Roles y permisos
 
 El backend autoriza por rol (ver la tabla en `esclerosis-back/README.md`). La UI
 acompaña esas reglas:
 
 - `RoleHomeScreen` arma los tabs según `usuario.rol` (`admin`, `medico`,
-  `paciente`).
+  `secretaria`, `paciente`). Un rol desconocido cae en un `default` mínimo, sin
+  datos clínicos.
+- `esPacienteProvider` es `rol == 'paciente'` (antes trataba `null` como
+  paciente, lo que ocultaba funciones mientras la sesión rehidrataba). Hay
+  también `esMedicoProvider`, `esSecretariaProvider` y
+  `puedeGestionarCitasProvider` (admin o secretaria).
 - `esAdminProvider` (`features/auth/application/auth_providers.dart`) oculta las
   acciones de crear/editar/eliminar en los catálogos (tratamientos, indicadores,
   categorías), que el backend restringe a `admin`. El médico los ve en modo
