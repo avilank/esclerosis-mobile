@@ -24,6 +24,15 @@ flutter analyze
 flutter test
 ```
 
+`test/api_integration_test.dart` prueba los clientes HTTP y el parseo de modelos
+contra el backend real. Necesita `esclerosis-back` levantado en el puerto 4027
+(`npm run dev`); si no responde, esos tests se saltan solos.
+
+El `pubspec.yaml` declara `sdk: ^3.8.0`. Ojo: con esa restricción **no** se puede
+usar la sintaxis `required this._campo` (private named parameters, Dart >= 3.12);
+hay que asignar los campos privados en la lista de inicialización, como en
+`core/network/auth_interceptor.dart`.
+
 ## Build de producción
 
 ```powershell
