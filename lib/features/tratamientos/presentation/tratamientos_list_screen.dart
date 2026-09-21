@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../../auth/application/auth_providers.dart';
@@ -25,14 +26,15 @@ class TratamientosListScreen extends ConsumerWidget {
     Future<void> crear() async {
       final data = await showTratamientoFormSheet(context);
       if (data == null) return;
-      try {
-        await api.create(data);
-        ref.invalidate(tratamientosListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          await api.create(data);
+          ref.invalidate(tratamientosListProvider);
+        },
+        success: 'Tratamiento creado',
+      );
     }
 
     return CrudListScaffold<Tratamiento>(
@@ -61,14 +63,15 @@ class TratamientosListScreen extends ConsumerWidget {
             onPressed: () async {
               final data = await showTratamientoFormSheet(context, tratamiento: tratamiento);
               if (data == null) return;
-              try {
-                await api.update(tratamiento.idTratamiento, data);
-                ref.invalidate(tratamientosListProvider);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
+              if (!context.mounted) return;
+              await AppToast.run(
+                context,
+                action: () async {
+                  await api.update(tratamiento.idTratamiento, data);
+                  ref.invalidate(tratamientosListProvider);
+                },
+                success: 'Tratamiento actualizado',
+              );
             },
           ),
           IconButton(
@@ -80,14 +83,15 @@ class TratamientosListScreen extends ConsumerWidget {
                 message: '¿Eliminar "${tratamiento.nombre}"?',
               );
               if (!confirmed) return;
-              try {
-                await api.remove(tratamiento.idTratamiento);
-                ref.invalidate(tratamientosListProvider);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
+              if (!context.mounted) return;
+              await AppToast.run(
+                context,
+                action: () async {
+                  await api.remove(tratamiento.idTratamiento);
+                  ref.invalidate(tratamientosListProvider);
+                },
+                success: 'Tratamiento eliminado',
+              );
             },
           ),
         ],

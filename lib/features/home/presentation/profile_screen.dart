@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/app_version_label.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/curved_teal_header_shell.dart';
@@ -138,6 +139,9 @@ class ProfileScreen extends ConsumerWidget {
                           confirmLabel: 'Cerrar sesión',
                         );
                         if (confirmed) {
+                          if (context.mounted) {
+                            AppToast.success(context, 'Sesión cerrada');
+                          }
                           await ref.read(authControllerProvider.notifier).logout();
                         }
                       },

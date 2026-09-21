@@ -1,4 +1,4 @@
 {
-  "API_BASE_URL": "https://REEMPLAZAR-con-dominio-de-esclerosis-back/api",
+  "API_BASE_URL": "https://mantenimiento-esclerosis-back.znm1ue.easypanel.host/api",
   "ENV_NAME": "prod"
 }

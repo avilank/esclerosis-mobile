@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_header.dart';
 import '../../../core/widgets/initials_avatar.dart';
@@ -40,11 +41,11 @@ class DiagnosticoDetailScreen extends ConsumerWidget {
       ref.invalidate(misDiagnosticosProvider);
       ref.invalidate(misPacientesProvider);
       ref.invalidate(historiasClinicasListProvider);
-      if (context.mounted) Navigator.of(context).pop();
+      if (!context.mounted) return;
+      AppToast.success(context, 'Diagnóstico eliminado');
+      Navigator.of(context).pop();
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (context.mounted) AppToast.error(context, e);
     }
   }
 

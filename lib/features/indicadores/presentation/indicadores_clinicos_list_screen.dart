@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../../auth/application/auth_providers.dart';
@@ -25,20 +26,20 @@ class IndicadoresClinicosListScreen extends ConsumerWidget {
     Future<void> crear() async {
       final categorias = categoriasAsync.value ?? const [];
       if (categorias.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Primero crea una categoría')));
+        AppToast.warning(context, 'Primero crea una categoría');
         return;
       }
       final data = await showIndicadorFormSheet(context, categorias: categorias);
       if (data == null) return;
-      try {
-        await api.create(data);
-        ref.invalidate(indicadoresClinicosListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          await api.create(data);
+          ref.invalidate(indicadoresClinicosListProvider);
+        },
+        success: 'Indicador creado',
+      );
     }
 
     return CrudListScaffold<IndicadorClinico>(
@@ -73,14 +74,15 @@ class IndicadoresClinicosListScreen extends ConsumerWidget {
                 indicador: indicador,
               );
               if (data == null) return;
-              try {
-                await api.update(indicador.idIndicador, data);
-                ref.invalidate(indicadoresClinicosListProvider);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
+              if (!context.mounted) return;
+              await AppToast.run(
+                context,
+                action: () async {
+                  await api.update(indicador.idIndicador, data);
+                  ref.invalidate(indicadoresClinicosListProvider);
+                },
+                success: 'Indicador actualizado',
+              );
             },
           ),
           IconButton(
@@ -92,14 +94,15 @@ class IndicadoresClinicosListScreen extends ConsumerWidget {
                 message: '¿Eliminar "${indicador.nombre}"?',
               );
               if (!confirmed) return;
-              try {
-                await api.remove(indicador.idIndicador);
-                ref.invalidate(indicadoresClinicosListProvider);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              }
+              if (!context.mounted) return;
+              await AppToast.run(
+                context,
+                action: () async {
+                  await api.remove(indicador.idIndicador);
+                  ref.invalidate(indicadoresClinicosListProvider);
+                },
+                success: 'Indicador eliminado',
+              );
             },
           ),
         ],

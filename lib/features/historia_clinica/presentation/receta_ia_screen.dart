@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../tratamientos/application/tratamientos_providers.dart';
 import '../application/historia_clinica_providers.dart';
 import '../data/ia_receta_api.dart';
@@ -61,6 +62,7 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
         _preview = false;
         _result = result;
       });
+      AppToast.success(context, 'Sugerencia lista');
     } on IaNotConfiguredException {
       final tratamientos = await ref.read(tratamientosListProvider.future);
       if (!mounted) return;
@@ -71,8 +73,13 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
           tratamientos.isEmpty ? null : tratamientos.first.idTratamiento,
         );
       });
+      AppToast.warning(context, 'IA no disponible. Mostramos una vista previa');
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) {
+        final message = AppToast.messageOf(e);
+        setState(() => _error = message);
+        AppToast.error(context, message);
+      }
     } finally {
       if (mounted) setState(() => _generating = false);
     }
@@ -103,9 +110,7 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
     }
     final tratamientoId = actual.tratamientoId;
     if (tratamientoId == null || tratamientoId == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El modelo no devolvió un tratamiento válido')),
-      );
+      AppToast.warning(context, 'La IA no devolvió un tratamiento válido');
       return;
     }
     setState(() => _saving = true);
@@ -120,11 +125,11 @@ class _RecetaIaScreenState extends ConsumerState<RecetaIaScreen> {
                 ? actual.justificacion
                 : _sustentacion.trim(),
           );
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      AppToast.success(context, 'Receta guardada');
+      Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (mounted) AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

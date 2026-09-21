@@ -72,9 +72,10 @@ class AppFormDialogChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(
+      // Dialog ya suma viewInsets; no re-aplicarlo o el teclado aplasta el modal.
+      insetPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.s5,
-        vertical: AppSpacing.s7 + MediaQuery.of(context).viewInsets.bottom / 2,
+        vertical: AppSpacing.s7,
       ),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),

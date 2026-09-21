@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../application/administracion_providers.dart';
 import '../../../core/validation/password_policy.dart';
 import '../domain/rol.dart';
@@ -72,13 +73,11 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_rolSeleccionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un rol')));
+      AppToast.warning(context, 'Selecciona un rol');
       return;
     }
     if (_esPaciente && _fechaNacimiento == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona la fecha de nacimiento')),
-      );
+      AppToast.warning(context, 'Selecciona la fecha de nacimiento');
       return;
     }
 
@@ -114,11 +113,11 @@ class _UsuarioCreateScreenState extends ConsumerState<UsuarioCreateScreen> {
     try {
       await ref.read(usuariosApiProvider).create(body);
       ref.invalidate(usuariosListProvider);
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      AppToast.success(context, 'Usuario creado');
+      Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (mounted) AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

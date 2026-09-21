@@ -118,9 +118,18 @@ abstract final class AppTheme {
         ),
       ),
 
-      snackBarTheme: const SnackBarThemeData(
+      snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: AppRadii.smAll),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        contentTextStyle: AppTypography.bodyMedium.copyWith(color: AppColors.ink),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.mdAll),
+        insetPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.s4,
+          0,
+          AppSpacing.s4,
+          AppSpacing.s5,
+        ),
       ),
 
       // Sin esto, `BottomNavigationBar` con mas de 3 items usa el tipo

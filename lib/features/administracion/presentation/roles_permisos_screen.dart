@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/administracion_providers.dart';
@@ -36,18 +37,19 @@ class RolesPermisosScreen extends ConsumerWidget {
         ],
       );
       if (data == null) return;
-      try {
-        if (id == null) {
-          await api.create(data);
-        } else {
-          await api.update(id, data);
-        }
-        ref.invalidate(rolesListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          if (id == null) {
+            await api.create(data);
+          } else {
+            await api.update(id, data);
+          }
+          ref.invalidate(rolesListProvider);
+        },
+        success: id == null ? 'Rol creado' : 'Rol actualizado',
+      );
     }
 
     Future<void> eliminar(Rol rol) async {
@@ -57,14 +59,15 @@ class RolesPermisosScreen extends ConsumerWidget {
         message: '¿Eliminar el rol "${rol.nombre}"?',
       );
       if (!confirmed) return;
-      try {
-        await api.remove(rol.idRol);
-        ref.invalidate(rolesListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          await api.remove(rol.idRol);
+          ref.invalidate(rolesListProvider);
+        },
+        success: 'Rol eliminado',
+      );
     }
 
     return CrudListScaffold<Rol>(

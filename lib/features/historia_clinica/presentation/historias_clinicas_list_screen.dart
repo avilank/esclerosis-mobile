@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/app_form_dialog.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../application/historia_clinica_providers.dart';
 import '../domain/historia_clinica.dart';
@@ -23,9 +24,7 @@ class HistoriasClinicasListScreen extends ConsumerWidget {
     Future<void> crear() async {
       final pacientes = pacientesAsync.value ?? const [];
       if (pacientes.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay pacientes disponibles para asignar')),
-        );
+        AppToast.warning(context, 'No hay pacientes para asignar');
         return;
       }
       final result = await showDialog<Map<String, dynamic>>(
@@ -34,17 +33,18 @@ class HistoriasClinicasListScreen extends ConsumerWidget {
         builder: (context) => _NuevaHistoriaDialog(pacientes: pacientes),
       );
       if (result == null) return;
-      try {
-        await api.create(
-          idPaciente: result['idPaciente'] as int,
-          estado: result['estado'] as String?,
-        );
-        ref.invalidate(historiasClinicasListProvider);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-        }
-      }
+      if (!context.mounted) return;
+      await AppToast.run(
+        context,
+        action: () async {
+          await api.create(
+            idPaciente: result['idPaciente'] as int,
+            estado: result['estado'] as String?,
+          );
+          ref.invalidate(historiasClinicasListProvider);
+        },
+        success: 'Historia clínica creada',
+      );
     }
 
     return CrudListScaffold<HistoriaClinica>(

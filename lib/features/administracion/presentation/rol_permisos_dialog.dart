@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/app_toast.dart';
 import '../application/administracion_providers.dart';
 import '../data/administracion_api.dart';
 import '../domain/permiso.dart';
@@ -63,10 +64,14 @@ class _RolPermisosDialogState extends State<_RolPermisosDialog> {
           _asignados.remove(permiso.idPermiso);
         }
       });
-    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        AppToast.success(
+          context,
+          value ? 'Permiso asignado' : 'Permiso quitado',
+        );
       }
+    } catch (e) {
+      if (mounted) AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _pending.remove(permiso.idPermiso));
     }

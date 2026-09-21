@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/validation/password_policy.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/crud_list_scaffold.dart';
 import '../../../core/widgets/initials_avatar.dart';
@@ -62,10 +63,9 @@ class UsuariosListScreen extends ConsumerWidget {
     try {
       await ref.read(usuariosApiProvider).update(usuario.idUsuario, body);
       ref.invalidate(usuariosListProvider);
+      if (context.mounted) AppToast.success(context, 'Usuario actualizado');
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (context.mounted) AppToast.error(context, e);
     }
   }
 
@@ -76,14 +76,15 @@ class UsuariosListScreen extends ConsumerWidget {
       message: '¿Eliminar al usuario ${usuario.username}?',
     );
     if (!confirmed) return;
-    try {
-      await ref.read(usuariosApiProvider).remove(usuario.idUsuario);
-      ref.invalidate(usuariosListProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
+    if (!context.mounted) return;
+    await AppToast.run(
+      context,
+      action: () async {
+        await ref.read(usuariosApiProvider).remove(usuario.idUsuario);
+        ref.invalidate(usuariosListProvider);
+      },
+      success: 'Usuario eliminado',
+    );
   }
 
   @override

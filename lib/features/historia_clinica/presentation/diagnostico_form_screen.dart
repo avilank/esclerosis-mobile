@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_toast.dart';
 import '../../../core/widgets/crud_list_header.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../indicadores/application/indicadores_providers.dart';
@@ -144,9 +145,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_historiaSeleccionada == null || _estadoSalud == null || _idMedico == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa historia clínica, médico y estado de salud')),
-      );
+      AppToast.warning(context, 'Completa historia clínica, médico y estado de salud');
       return;
     }
 
@@ -169,6 +168,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
             idCita: _cita?.idCita,
           );
       if (!mounted) return;
+      AppToast.success(context, 'Diagnóstico guardado');
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => RecetaIaScreen(
@@ -178,9 +178,7 @@ class _DiagnosticoFormScreenState extends ConsumerState<DiagnosticoFormScreen> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (mounted) AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
